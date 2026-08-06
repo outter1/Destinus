@@ -1,0 +1,147 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Maria Silva",
+      "email": "maria@email.com",
+      "password": "123",
+      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
+      "needs": {
+        "wheelchair": true,
+        "visual": false,
+        "hearing": false,
+        "neurodivergent": false
+      },
+      "disabilities": {
+        "wheelchair": true,
+        "blind": false,
+        "lowVision": false,
+        "deaf": false,
+        "autism": false,
+        "epilepsy": false
+      },
+      "preferences": {
+        "trails": true,
+        "walks": true,
+        "beaches": false,
+        "culture": true,
+        "gastronomy": false
+      }
+    },
+    {
+      "id": "1786026428738",
+      "name": "Gabriel Silva Bastos",
+      "email": "gabrielsilvabastosgbs@gmail.com",
+      "password": "Gabriel2006@eu",
+      "needs": {
+        "wheelchair": false,
+        "visual": false,
+        "hearing": false,
+        "neurodivergent": false
+      }
+    }
+  ],
+  "places": [
+    {
+      "id": "caxias_1",
+      "name": "Igreja Matriz de Nossa Senhora do Pilar",
+      "city": "Duque de Caxias",
+      "address": "Estrada do Pilar, s/n - Pilar",
+      "category": "Marco Histórico Colonial",
+      "lat": -22.7094,
+      "lng": -43.2842,
+      "imageUrl": "https://images.unsplash.com/photo-1548625361-1854497e8820?w=600",
+      "accessibilityDetails": {
+        "wheelchair": "Rampa lateral de acesso ao nave principal, piso externo regular",
+        "blind": "Audioguia descritivo sobre o barroco colonial via QR Code",
+        "tactilePaving": false,
+        "adaptedRestroom": true
+      },
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7094,-43.2842"
+    },
+    {
+      "id": "caxias_2",
+      "name": "Centro Cultural Oscar Niemeyer",
+      "city": "Duque de Caxias",
+      "address": "Praça Humaitá - Centro",
+      "category": "Centro Cultural",
+      "lat": -22.7885,
+      "lng": -43.3081,
+      "imageUrl": "https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=600",
+      "accessibilityDetails": {
+        "wheelchair": "Elevadores adaptados e rampas helicoidais de ângulo suave",
+        "blind": "Piso tátil direcional e maquete tátil do complexo no saguão",
+        "tactilePaving": true,
+        "adaptedRestroom": true
+      },
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7885,-43.3081"
+    },
+    {
+      "id": "nova_iguacu_1",
+      "name": "Parque Natural Municipal de Nova Iguaçu",
+      "city": "Nova Iguaçu",
+      "address": "Estrada de Acesso ao Parque, s/n - K11",
+      "category": "Parque & Natureza",
+      "lat": -22.7681,
+      "lng": -43.4682,
+      "imageUrl": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=600",
+      "accessibilityDetails": {
+        "wheelchair": "Trilha adaptada de piso batido de 800m até o Poço da Manteiga",
+        "blind": "Trilha sensorial guiada com sinalização em Braille",
+        "tactilePaving": false,
+        "adaptedRestroom": true
+      },
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7681,-43.4682"
+    },
+    {
+      "id": "caxias_3",
+      "name": "Caxias Shopping",
+      "city": "Duque de Caxias",
+      "address": "Rodovia Washington Luiz, 2895 - Parque Duque",
+      "category": "Compras & Lazer",
+      "lat": -22.776,
+      "lng": -43.2925,
+      "imageUrl": "https://images.unsplash.com/photo-1567449303078-57ad995bd301?w=600",
+      "accessibilityDetails": {
+        "wheelchair": "Vagas PWD cobertas, empréstimo de cadeira motorizada na entrada",
+        "blind": "Sinalização tátil em elevadores e cães-guia permitidos em todas as áreas",
+        "tactilePaving": true,
+        "adaptedRestroom": true
+      },
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7760,-43.2925"
+    }
+  ],
+  "experiences": [
+    {
+      "id": "101",
+      "title": "Voo Duplo Adaptado de Asa Delta",
+      "category": "Aventura",
+      "price": "R$ 350",
+      "location": "São Conrado / Baixada",
+      "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+      "accessibilitySummary": "Equipamento com cadeirinha de voo adaptada"
+    },
+    {
+      "id": "102",
+      "title": "Tour Gastronômico e Cultural",
+      "category": "Gastronomia",
+      "price": "R$ 120",
+      "location": "Centro Histórico",
+      "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600",
+      "accessibilitySummary": "Cardápio em Braille e Acessibilidade Física"
+    }
+  ],
+  "reservations": [
+    {
+      "id": "res_1",
+      "type": "Passeio",
+      "title": "Voo Duplo Adaptado",
+      "date": "20 de Outubro - 09:00",
+      "detail": "Reserva confirmada. Instrutor certificado em acessibilidade.",
+      "status": "Confirmado",
+      "tab": "Proximas",
+      "icon": "📷",
+      "merchantUrl": "https://whatsapp.com"
+    }
+  ]
+}
