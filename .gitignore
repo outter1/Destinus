@@ -1,0 +1,49 @@
+# Dependências do Node
+node_modules/
+.pnp
+.pnp.js
+
+# Expo e arquivos de build
+.expo/
+dist/
+web-build/
+*.apk
+*.aab
+*.ipa
+
+# Variáveis de ambiente e dados sensíveis
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Arquivos do Sistema Operacional
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Configurações de IDE / Editor
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Builds do Android e iOS (se gerar código nativo)
+android/app/build/
+android/.gradle/
+android/captures/
+ios/Pods/
+ios/build/
+ios/DerivedData/

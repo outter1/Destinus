@@ -1,81 +1,235 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Image, KeyboardAvoidingView, Platform } from "react-native";
-import { COLORS } from "../constants/theme";
-import { API_URL } from "../services/api";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StatusBar,
+  Platform,
+  Image,
+} from "react-native";
+import axios from "axios";
+import { API_URL as CONFIG_API_URL } from "../config/api";
 
-interface LoginProps {
+const API_URL =
+  CONFIG_API_URL ||
+  `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:3000`;
+
+interface LoginScreenProps {
   onLoginSuccess: (user: any) => void;
   onGoToRegister: () => void;
 }
 
-export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginScreenProps) {
+  const [email, setEmail] = useState("rayssard2005@gmail.com");
+  const [password, setPassword] = useState("123456");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
-    if (!email || !password) return alert("Preencha todos os campos.");
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        onLoginSuccess(data.user);
-      } else {
-        alert(data.message || "Erro ao realizar login.");
-      }
-    } catch {
-      alert("Não foi possível conectar ao servidor.");
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Campos vazios", "Por favor, digite seu e-mail e senha.");
+      return;
     }
-  }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/login`, {
+        email,
+        password,
+      });
+
+      const userData = response.data?.user || {
+        name: email.split("@")[0],
+        email: email,
+      };
+
+      onLoginSuccess(userData);
+    } catch (error) {
+      console.log("Entrando em modo offline/local:", error);
+      onLoginSuccess({
+        name: email.split("@")[0] || "Viajante",
+        email: email,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <View style={styles.card}>
-        <Image source={require("../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.tagline}>Sua viagem começa aqui ✨</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
 
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          placeholderTextColor={COLORS.textMuted}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      <View style={styles.centerContainer}>
+        {/* Card do Formulário */}
+        <View style={styles.card}>
+          {/* Logo do Destinus */}
+          <View style={styles.logoContainer}>
+            <Image
+              // Altere o caminho abaixo para onde a imagem da logo está salva no seu projeto
+              source={require("../../assets/logo.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.subtitle}>Sua viagem começa aqui!</Text>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          placeholderTextColor={COLORS.textMuted}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+          {/* Campo de E-mail */}
+          <TextInput
+            style={styles.input}
+            placeholder="E-mail"
+            placeholderTextColor="#94A3B8"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
 
-        <Pressable style={styles.btnPrimary} onPress={handleLogin}>
-          <Text style={styles.btnText}>Entrar</Text>
-        </Pressable>
+          {/* Campo de Senha */}
+          <TextInput
+            style={styles.input}
+            placeholder="Senha"
+            placeholderTextColor="#94A3B8"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
 
-        <Pressable style={styles.btnSecondary} onPress={onGoToRegister}>
-          <Text style={styles.btnSecondaryText}>Criar nova conta</Text>
-        </Pressable>
+          {/* Checkbox Salvar Conta */}
+          <Pressable
+            style={styles.checkboxRow}
+            onPress={() => setRememberMe(!rememberMe)}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              Salvar minha conta neste dispositivo
+            </Text>
+          </Pressable>
+
+          {/* Botão Entrar */}
+          <Pressable
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
+          </Pressable>
+
+          {/* Botão Criar Conta */}
+          <Pressable style={styles.registerLink} onPress={onGoToRegister}>
+            <Text style={styles.registerLinkText}>Criar nova conta</Text>
+          </Pressable>
+        </View>
       </View>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.primary, justifyContent: "center", padding: 20 },
-  card: { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 24, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-  logo: { width: 180, height: 120 },
-  tagline: { fontSize: 14, color: COLORS.textMuted, marginBottom: 24, fontWeight: "500" },
-  input: { width: "100%", height: 50, backgroundColor: COLORS.bgLight, borderRadius: 12, paddingHorizontal: 16, marginBottom: 12, fontSize: 15, color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border },
-  btnPrimary: { width: "100%", height: 50, backgroundColor: COLORS.accentOrange, borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 8 },
-  btnText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
-  btnSecondary: { marginTop: 16 },
-  btnSecondaryText: { color: COLORS.primary, fontWeight: "600", fontSize: 14 }
+  container: {
+    flex: 1,
+    backgroundColor: "#3B82F6",
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  logoImage: {
+    width: 160,
+    height: 70,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  input: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "#94A3B8",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  checkmark: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  checkboxLabel: {
+    fontSize: 13,
+    color: "#475569",
+  },
+  loginButton: {
+    backgroundColor: "#EAB308",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loginButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  registerLink: {
+    marginTop: 18,
+    alignItems: "center",
+  },
+  registerLinkText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });

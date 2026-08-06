@@ -39,6 +39,62 @@
         "hearing": false,
         "neurodivergent": false
       }
+    },
+    {
+      "id": "1786034422573",
+      "name": "Reenam",
+      "email": "reenamtoledofonseca@gmail.com",
+      "password": "Reenam",
+      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
+      "needs": {
+        "wheelchair": false,
+        "visual": false,
+        "hearing": true,
+        "neurodivergent": false
+      },
+      "disabilities": {
+        "wheelchair": false,
+        "blind": false,
+        "lowVision": false,
+        "deaf": false,
+        "autism": false,
+        "epilepsy": false
+      },
+      "preferences": {
+        "trails": false,
+        "walks": false,
+        "beaches": false,
+        "culture": false,
+        "gastronomy": false
+      }
+    },
+    {
+      "id": "1786038162025",
+      "name": "Rayssa ",
+      "email": "rayssard2005@gmail.com",
+      "password": "rayssa05",
+      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
+      "needs": {
+        "wheelchair": false,
+        "visual": false,
+        "hearing": false,
+        "neurodivergent": false
+      },
+      "disabilities": {
+        "wheelchair": false,
+        "blind": false,
+        "lowVision": false,
+        "deaf": false,
+        "autism": false,
+        "epilepsy": false
+      },
+      "preferences": {
+        "trails": false,
+        "walks": false,
+        "beaches": false,
+        "culture": false,
+        "gastronomy": false
+      }
     }
   ],
   "places": [

@@ -174,4 +174,26 @@ routes.post("/login", (req, res) => {
   return res.json({ message: "Login realizado com sucesso!", user });
 });
 
+// 6. Atualizar Foto de Perfil
+routes.put("/usuarios/:id/foto", (req, res) => {
+  const { id } = req.params;
+  const { photoUrl } = req.body;
+  const data = db.read();
+
+  // Busca em 'users' ou 'usuarios'
+  let user = (data.users || []).find((u: any) => String(u.id) === String(id));
+  if (!user) {
+    user = (data.usuarios || []).find((u: any) => String(u.id) === String(id));
+  }
+
+  if (!user) {
+    return res.status(404).json({ message: "Usuário não encontrado" });
+  }
+
+  user.photoUrl = photoUrl;
+  db.write(data);
+
+  return res.json({ message: "Foto atualizada com sucesso!", photoUrl: user.photoUrl, user });
+});
+
 export default routes;
