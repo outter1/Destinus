@@ -1,9 +1,9 @@
 import { Platform } from "react-native";
 
-// IP da Rede Local
-const MEU_IP_LOCAL = "192.168.19.155";
+const MEU_IP_LOCAL = "192.168.0.168w";
+const PORTA = "3333"; // Altere para 3000 se o servidor estiver rodando na porta padrão do React Native
 
 export const API_URL =
   Platform.OS === "web"
-    ? "http://localhost:3333/api"
-    : `http://${MEU_IP_LOCAL}:3333/api`;
+    ? `http://localhost:${PORTA}/api`
+    : `http://${MEU_IP_LOCAL}:${PORTA}/api`;

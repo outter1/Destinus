@@ -1,100 +1,82 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Linking } from "react-native";
-import { COLORS } from "../constants/theme";
-import { API_URL } from "../services/api";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+
+interface Booking {
+  id: string;
+  placeName: string;
+  date: string;
+  tickets: number;
+  status: string;
+}
 
 export function ReservationsScreen() {
-  const [activeTab, setActiveTab] = useState<"Proximas" | "Passadas" | "Canceladas">("Proximas");
-  const [reservations, setReservations] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetch(`${API_URL}/reservas`)
-      .then((res) => res.json())
-      .then((data) => setReservations(data))
-      .catch((err) => console.log(err));
-  }, []);
-
-  const filtered = reservations.filter((r) => r.tab === activeTab || (!r.tab && activeTab === "Proximas"));
+  const [bookings] = useState<Booking[]>([
+    {
+      id: "b1",
+      placeName: "Parque Natural Municipal da Taquara",
+      date: "15/10/2026 - 09:00",
+      tickets: 2,
+      status: "Confirmada",
+    },
+    {
+      id: "b2",
+      placeName: "Museu Vivo do São Bento",
+      date: "22/10/2026 - 14:00",
+      tickets: 1,
+      status: "Pendente",
+    },
+  ]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Suas reservas 🧳</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
+      {/* Cabeçalho Amarelo sem emojis no título */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.subTitle}>Suas Viagens e Ingressos</Text>
+        <Text style={styles.headerTitle}>Minhas Reservas</Text>
       </View>
 
-      {/* Abas idênticas às da imagem de referência */}
-      <View style={styles.tabsContainer}>
-        {(["Proximas", "Passadas", "Canceladas"] as const).map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tabBtn, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === "Proximas" ? "Próximas" : tab}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 20 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBox}>
-                <Text style={{ fontSize: 20 }}>{item.icon || "🎫"}</Text>
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardDate}>{item.date}</Text>
-              </View>
+      <View style={styles.verticalList}>
+        {bookings.map((booking) => (
+          <View key={booking.id} style={styles.bookingCard}>
+            <View style={styles.bookingHeader}>
+              <Text style={styles.bookingPlaceName}>{booking.placeName}</Text>
               <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{item.status || "Confirmado"}</Text>
+                <Text style={styles.statusText}>{booking.status}</Text>
               </View>
             </View>
-
-            <Text style={styles.cardDetail}>{item.detail}</Text>
-
-            {item.merchantUrl && (
-              <Pressable style={styles.merchantBtn} onPress={() => Linking.openURL(item.merchantUrl)}>
-                <Text style={styles.merchantBtnText}>Ver Voucher / Detalhes do Parceiro ➔</Text>
-              </Pressable>
-            )}
+            <Text style={styles.bookingDetail}>📅 Data: {booking.date}</Text>
+            <Text style={styles.bookingDetail}>🎟️ Ingressos: {booking.tickets}</Text>
           </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={{ fontSize: 40, marginBottom: 10 }}>🏖️</Text>
-            <Text style={styles.emptyText}>Nenhuma reserva encontrada nesta categoria.</Text>
-          </View>
-        }
-      />
-    </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgLight },
-  header: { backgroundColor: COLORS.primary, paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { color: "#FFF", fontSize: 22, fontWeight: "bold" },
-  tabsContainer: { flexDirection: "row", backgroundColor: "#FFF", padding: 6, margin: 16, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
-  tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 12 },
-  tabActive: { backgroundColor: COLORS.primary },
-  tabText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
-  tabTextActive: { color: "#FFF", fontWeight: "bold" },
-  card: { backgroundColor: "#FFF", borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: COLORS.border, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
-  cardHeader: { flexDirection: "row", alignItems: "center" },
-  iconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.bgLight, justifyContent: "center", alignItems: "center" },
-  cardTitle: { fontSize: 16, fontWeight: "bold", color: COLORS.textDark },
-  cardDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  statusBadge: { backgroundColor: "#DCFCE7", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText: { color: "#15803D", fontSize: 11, fontWeight: "bold" },
-  cardDetail: { fontSize: 13, color: COLORS.textMuted, marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
-  merchantBtn: { marginTop: 12, backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 10, alignItems: "center" },
-  merchantBtnText: { color: "#FFF", fontWeight: "bold", fontSize: 12 },
-  emptyBox: { alignItems: "center", marginTop: 40 },
-  emptyText: { color: COLORS.textMuted, fontSize: 14 }
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  headerContainer: {
+    backgroundColor: "#CA8A04",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  subTitle: { color: "#FEF08A", fontSize: 14, fontWeight: "500" },
+  headerTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "bold", marginTop: 4 },
+  verticalList: { paddingHorizontal: 16, marginTop: 20 },
+  bookingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  bookingHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  bookingPlaceName: { color: "#0F172A", fontSize: 15, fontWeight: "bold", flex: 1 },
+  statusBadge: { backgroundColor: "#FEF08A", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusText: { color: "#854D0E", fontWeight: "bold", fontSize: 11 },
+  bookingDetail: { color: "#64748B", fontSize: 13, marginTop: 4 },
 });

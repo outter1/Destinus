@@ -17,18 +17,43 @@ export default function App() {
   const [screen, setScreen] = useState<ScreenType>("login");
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
 
   const PRIMARY_COLOR = COLORS?.primary || "#2563EB";
+  const ORANGE_COLOR = "#EA580C";
+  const YELLOW_COLOR = "#CA8A04";
 
   const handleTabChange = (tab: TabType) => {
     setSelectedPlace(null);
     setActiveTab(tab);
   };
 
+  const handleSelectPlace = (place: any) => {
+    setSelectedPlace(place);
+    setRecentlyViewed((prev) => {
+      const exists = prev.some((p) => p.id === place.id);
+      if (exists) return prev;
+      return [place, ...prev];
+    });
+  };
+
+  const getActiveTabColor = () => {
+    switch (activeTab) {
+      case "experiences":
+        return ORANGE_COLOR;
+      case "reservations":
+        return YELLOW_COLOR;
+      case "profile":
+        return ORANGE_COLOR;
+      default:
+        return PRIMARY_COLOR;
+    }
+  };
+
   if (screen === "login") {
     return (
       <LoginScreen
-        onLoginSuccess={(loggedUser) => {
+        onLoginSuccess={(loggedUser: any) => {
           setUser(loggedUser);
           setScreen("main");
           setActiveTab("home");
@@ -42,7 +67,7 @@ export default function App() {
     return (
       <RegisterScreen
         onGoToLogin={() => setScreen("login")}
-        onRegisterSuccess={(newUser) => {
+        onRegisterSuccess={(newUser: any) => {
           setUser(newUser);
           setScreen("main");
           setActiveTab("home");
@@ -52,10 +77,9 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: PRIMARY_COLOR }]}>
-      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_COLOR} />
+    <SafeAreaView style={[styles.container, { backgroundColor: getActiveTabColor() }]}>
+      <StatusBar barStyle="light-content" backgroundColor={getActiveTabColor()} />
 
-      {/* Conteúdo Principal */}
       <View style={styles.mainContent}>
         {selectedPlace ? (
           <PlaceDetailScreen
@@ -67,15 +91,19 @@ export default function App() {
             {activeTab === "home" && (
               <HomeScreen
                 user={user}
-                onNavigateTab={(tab) => handleTabChange(tab as TabType)}
-                onSelectPlace={(place) => setSelectedPlace(place)}
+                onNavigateTab={(tab: string) => handleTabChange(tab as TabType)}
+                onSelectPlace={handleSelectPlace}
               />
             )}
-            {activeTab === "experiences" && <ExperiencesScreen />}
+            {activeTab === "experiences" && (
+              <ExperiencesScreen onSelectPlace={handleSelectPlace} />
+            )}
             {activeTab === "reservations" && <ReservationsScreen />}
             {activeTab === "profile" && (
               <ProfileScreen
                 user={user}
+                recentlyViewed={recentlyViewed}
+                onSelectPlace={handleSelectPlace}
                 onUpdateUser={(updatedUser) => setUser(updatedUser)}
                 onLogout={() => {
                   setUser(null);
@@ -88,7 +116,6 @@ export default function App() {
         )}
       </View>
 
-      {/* Barra de Navegação Inferior */}
       {!selectedPlace && (
         <View style={styles.bottomBar}>
           <Pressable style={styles.tabItem} onPress={() => handleTabChange("home")}>
@@ -108,7 +135,7 @@ export default function App() {
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "experiences" && { color: PRIMARY_COLOR, fontWeight: "bold" },
+                activeTab === "experiences" && { color: ORANGE_COLOR, fontWeight: "bold" },
               ]}
             >
               Experiências
@@ -120,7 +147,7 @@ export default function App() {
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "reservations" && { color: PRIMARY_COLOR, fontWeight: "bold" },
+                activeTab === "reservations" && { color: YELLOW_COLOR, fontWeight: "bold" },
               ]}
             >
               Reservas
@@ -132,7 +159,7 @@ export default function App() {
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "profile" && { color: PRIMARY_COLOR, fontWeight: "bold" },
+                activeTab === "profile" && { color: ORANGE_COLOR, fontWeight: "bold" },
               ]}
             >
               Perfil
