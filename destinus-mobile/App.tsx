@@ -8,24 +8,32 @@ import { ExperiencesScreen } from "./src/screens/ExperiencesScreen";
 import { ReservationsScreen } from "./src/screens/ReservationsScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { PlaceDetailScreen } from "./src/screens/PlaceDetailScreen";
+import { AccessibilityOnboardingModal } from "./src/screens/AccessibilityOnboardingModal";
+import { AccessibilityProvider, useAccessibility } from "./src/screens/AccessibilityContext";
+import { LibrasAvatar } from "./src/components/LibrasAvatar";
 
 type ScreenType = "login" | "register" | "main";
 type TabType = "home" | "experiences" | "reservations" | "profile";
 
-export default function App() {
+function NavigationRoot() {
   const [user, setUser] = useState<any>(null);
   const [screen, setScreen] = useState<ScreenType>("login");
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [showAccessibilityModal, setShowAccessibilityModal] = useState(false);
+
+  // Consumindo theme e isNeurodivergent do contexto
+  const { fontScale, speak, theme, isNeurodivergent } = useAccessibility();
 
   const PRIMARY_COLOR = COLORS?.primary || "#2563EB";
   const ORANGE_COLOR = "#EA580C";
   const YELLOW_COLOR = "#CA8A04";
 
-  const handleTabChange = (tab: TabType) => {
+  const handleTabChange = (tab: TabType, label: string) => {
     setSelectedPlace(null);
     setActiveTab(tab);
+    speak(`Aba ${label}`);
   };
 
   const handleSelectPlace = (place: any) => {
@@ -38,6 +46,8 @@ export default function App() {
   };
 
   const getActiveTabColor = () => {
+    if (isNeurodivergent) return theme.backgroundColor; // Evita luzes vibrantes no topo em modo neurodivergente
+
     switch (activeTab) {
       case "experiences":
         return ORANGE_COLOR;
@@ -48,6 +58,13 @@ export default function App() {
       default:
         return PRIMARY_COLOR;
     }
+  };
+
+  const getTabActiveColor = (tab: TabType) => {
+    if (isNeurodivergent) return theme.accentColor;
+    if (tab === "experiences" || tab === "profile") return ORANGE_COLOR;
+    if (tab === "reservations") return YELLOW_COLOR;
+    return PRIMARY_COLOR;
   };
 
   if (screen === "login") {
@@ -65,14 +82,23 @@ export default function App() {
 
   if (screen === "register") {
     return (
-      <RegisterScreen
-        onGoToLogin={() => setScreen("login")}
-        onRegisterSuccess={(newUser: any) => {
-          setUser(newUser);
-          setScreen("main");
-          setActiveTab("home");
-        }}
-      />
+      <>
+        <RegisterScreen
+          onGoToLogin={() => setScreen("login")}
+          onRegisterSuccess={(newUser: any) => {
+            setUser(newUser);
+            setShowAccessibilityModal(true);
+          }}
+        />
+        <AccessibilityOnboardingModal
+          visible={showAccessibilityModal}
+          onFinish={() => {
+            setShowAccessibilityModal(false);
+            setScreen("main");
+            setActiveTab("home");
+          }}
+        />
+      </>
     );
   }
 
@@ -80,7 +106,7 @@ export default function App() {
     <SafeAreaView style={[styles.container, { backgroundColor: getActiveTabColor() }]}>
       <StatusBar barStyle="light-content" backgroundColor={getActiveTabColor()} />
 
-      <View style={styles.mainContent}>
+      <View style={[styles.mainContent, { backgroundColor: theme.backgroundColor }]}>
         {selectedPlace ? (
           <PlaceDetailScreen
             place={selectedPlace}
@@ -91,7 +117,7 @@ export default function App() {
             {activeTab === "home" && (
               <HomeScreen
                 user={user}
-                onNavigateTab={(tab: string) => handleTabChange(tab as TabType)}
+                onNavigateTab={(tab: string) => handleTabChange(tab as TabType, tab)}
                 onSelectPlace={handleSelectPlace}
               />
             )}
@@ -117,49 +143,77 @@ export default function App() {
       </View>
 
       {!selectedPlace && (
-        <View style={styles.bottomBar}>
-          <Pressable style={styles.tabItem} onPress={() => handleTabChange("home")}>
-            <Text style={{ fontSize: 20 }}>🏠</Text>
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: theme.cardBackgroundColor,
+              borderTopColor: theme.borderColor,
+            },
+          ]}
+        >
+          <Pressable style={styles.tabItem} onPress={() => handleTabChange("home", "Início")}>
+            <Text style={{ fontSize: 20 * fontScale }}>🏠</Text>
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "home" && { color: PRIMARY_COLOR, fontWeight: "bold" },
+                {
+                  fontSize: 11 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                  color: activeTab === "home" ? getTabActiveColor("home") : theme.secondaryTextColor,
+                },
+                activeTab === "home" && { fontWeight: "bold" },
               ]}
             >
               Início
             </Text>
           </Pressable>
 
-          <Pressable style={styles.tabItem} onPress={() => handleTabChange("experiences")}>
-            <Text style={{ fontSize: 20 }}>📷</Text>
+          <Pressable style={styles.tabItem} onPress={() => handleTabChange("experiences", "Experiências")}>
+            <Text style={{ fontSize: 20 * fontScale }}>📷</Text>
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "experiences" && { color: ORANGE_COLOR, fontWeight: "bold" },
+                {
+                  fontSize: 11 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                  color: activeTab === "experiences" ? getTabActiveColor("experiences") : theme.secondaryTextColor,
+                },
+                activeTab === "experiences" && { fontWeight: "bold" },
               ]}
             >
               Experiências
             </Text>
           </Pressable>
 
-          <Pressable style={styles.tabItem} onPress={() => handleTabChange("reservations")}>
-            <Text style={{ fontSize: 20 }}>🧳</Text>
+          <Pressable style={styles.tabItem} onPress={() => handleTabChange("reservations", "Reservas")}>
+            <Text style={{ fontSize: 20 * fontScale }}>🧳</Text>
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "reservations" && { color: YELLOW_COLOR, fontWeight: "bold" },
+                {
+                  fontSize: 11 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                  color: activeTab === "reservations" ? getTabActiveColor("reservations") : theme.secondaryTextColor,
+                },
+                activeTab === "reservations" && { fontWeight: "bold" },
               ]}
             >
               Reservas
             </Text>
           </Pressable>
 
-          <Pressable style={styles.tabItem} onPress={() => handleTabChange("profile")}>
-            <Text style={{ fontSize: 20 }}>👤</Text>
+          <Pressable style={styles.tabItem} onPress={() => handleTabChange("profile", "Perfil")}>
+            <Text style={{ fontSize: 20 * fontScale }}>👤</Text>
             <Text
               style={[
                 styles.tabLabel,
-                activeTab === "profile" && { color: ORANGE_COLOR, fontWeight: "bold" },
+                {
+                  fontSize: 11 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                  color: activeTab === "profile" ? getTabActiveColor("profile") : theme.secondaryTextColor,
+                },
+                activeTab === "profile" && { fontWeight: "bold" },
               ]}
             >
               Perfil
@@ -167,20 +221,38 @@ export default function App() {
           </Pressable>
         </View>
       )}
+
+      {/* Intérprete Virtual de Libras flutuante */}
+      <LibrasAvatar />
+
+      <AccessibilityOnboardingModal
+        visible={showAccessibilityModal}
+        onFinish={() => {
+          setShowAccessibilityModal(false);
+          setScreen("main");
+          setActiveTab("home");
+        }}
+      />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <AccessibilityProvider>
+      <NavigationRoot />
+    </AccessibilityProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  mainContent: { flex: 1, backgroundColor: "#F8FAFC" },
+  mainContent: { flex: 1 },
   bottomBar: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     paddingVertical: 10,
     paddingBottom: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
     justifyContent: "space-around",
     elevation: 10,
     shadowColor: "#000",
@@ -189,5 +261,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   tabItem: { alignItems: "center" },
-  tabLabel: { fontSize: 11, color: "#64748B", marginTop: 2, fontWeight: "500" },
+  tabLabel: { marginTop: 2, fontWeight: "500" },
 });

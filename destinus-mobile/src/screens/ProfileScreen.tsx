@@ -1,272 +1,317 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
+  Switch,
+  SafeAreaView,
   Image,
-  Modal,
-  TextInput,
-  Alert,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+import { useAccessibility } from "./AccessibilityContext";
 
-interface ProfileScreenProps {
-  user?: any;
+export interface ProfileScreenProps {
+  user?: {
+    name?: string;
+    username?: string;
+    email?: string;
+    nome?: string;
+    avatarUrl?: string;
+  };
+  onLogout?: () => void;
   recentlyViewed?: any[];
   onSelectPlace?: (place: any) => void;
-  onUpdateUser?: (user: any) => void;
-  onLogout?: () => void;
+  onUpdateUser?: (updatedUser: any) => void;
 }
 
 export function ProfileScreen({
   user,
-  recentlyViewed = [],
+  onLogout,
+  recentlyViewed,
   onSelectPlace,
   onUpdateUser,
-  onLogout,
 }: ProfileScreenProps) {
-  const [profileData, setProfileData] = useState({
-    name: user?.name || "Rayssa Rocha",
-    email: user?.email || "rayssa@email.com",
-    phone: user?.phone || "(21) 98765-4321",
-    avatarUri:
-      user?.avatarUri ||
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
-  });
+  const {
+    theme,
+    fontScale,
+    isNeurodivergent,
+    librasEnabled,
+    speak,
+    setFontScale,
+    setIsNeurodivergent,
+    setLibrasEnabled,
+  } = useAccessibility();
 
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [editName, setEditName] = useState(profileData.name);
-  const [editEmail, setEditEmail] = useState(profileData.email);
-  const [editPhone, setEditPhone] = useState(profileData.phone);
+  const userName = user?.name || user?.username || user?.nome || "Usuário Destinus";
+  const userEmail = user?.email || "usuario@destinus.com.br";
+  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#2563EB";
 
-  const pickAvatarFromGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permissão necessária", "Permita o acesso à galeria para alterar sua foto.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets[0]?.uri) {
-      const newAvatar = result.assets[0].uri;
-      const updated = { ...profileData, avatarUri: newAvatar };
-      setProfileData(updated);
-      if (onUpdateUser) onUpdateUser(updated);
-    }
+  const handleIncreaseFont = () => {
+    const newScale = Math.min(fontScale + 0.1, 1.5);
+    if (setFontScale) setFontScale(newScale);
+    if (speak) speak("Tamanho do texto aumentado");
   };
 
-  const handleSaveProfile = () => {
-    const updated = {
-      ...profileData,
-      name: editName,
-      email: editEmail,
-      phone: editPhone,
-    };
-    setProfileData(updated);
-    if (onUpdateUser) onUpdateUser(updated);
-    setIsEditModalVisible(false);
-    Alert.alert("Sucesso", "Dados cadastrais atualizados!");
+  const handleDecreaseFont = () => {
+    const newScale = Math.max(fontScale - 0.1, 0.8);
+    if (setFontScale) setFontScale(newScale);
+    if (speak) speak("Tamanho do texto diminuído");
+  };
+
+  const handleToggleNeurodivergent = (value: boolean) => {
+    if (setIsNeurodivergent) setIsNeurodivergent(value);
+    if (speak) speak(value ? "Modo neurodivergente ativado" : "Modo neurodivergente desativado");
+  };
+
+  const handleToggleLibras = (value: boolean) => {
+    if (setLibrasEnabled) setLibrasEnabled(value);
+    if (speak) speak(value ? "Suporte a Libras e leitura por voz ativado" : "Suporte a Libras desativado");
+  };
+
+  const handleLogout = () => {
+    if (speak) speak("Saindo da conta");
+    if (onLogout) onLogout();
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
-      {/* Perfil & Troca de Foto */}
-      <View style={styles.profileHeader}>
-        <TouchableOpacity style={styles.avatarContainer} onPress={pickAvatarFromGallery}>
-          <Image source={{ uri: profileData.avatarUri }} style={styles.avatarImage} />
-          <View style={styles.cameraBadge}>
-            <Text style={styles.cameraIcon}>📷</Text>
-          </View>
-        </TouchableOpacity>
-
-        <Text style={styles.profileName}>{profileData.name}</Text>
-        <Text style={styles.profileEmail}>{profileData.email}</Text>
-
-        <TouchableOpacity
-          style={styles.editProfileBtn}
-          onPress={() => {
-            setEditName(profileData.name);
-            setEditEmail(profileData.email);
-            setEditPhone(profileData.phone);
-            setIsEditModalVisible(true);
-          }}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* Título do Perfil */}
+        <Text
+          style={[
+            styles.headerTitle,
+            {
+              color: theme.textColor,
+              fontSize: 22 * fontScale,
+              letterSpacing: theme.letterSpacing,
+            },
+          ]}
         >
-          <Text style={styles.editProfileBtnText}>Editar Dados Cadastrais</Text>
-        </TouchableOpacity>
-      </View>
+          Meu Perfil
+        </Text>
 
-      {/* Informações Cadastrais */}
-      <View style={styles.infoCard}>
-        <Text style={styles.infoLabel}>Telefone / WhatsApp</Text>
-        <Text style={styles.infoValue}>{profileData.phone}</Text>
-      </View>
-
-      {/* Seção Visto Recently */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Visto Recently</Text>
-      </View>
-
-      {recentlyViewed.length === 0 ? (
-        <Text style={styles.emptyText}>Você ainda não navegou por nenhum local.</Text>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 16 }}>
-          {recentlyViewed.map((item) => (
-            <TouchableOpacity
-              key={`recent_${item.id}`}
-              style={styles.recentCard}
-              onPress={() => onSelectPlace && onSelectPlace(item)}
-            >
-              <Image source={{ uri: item.imageUrl }} style={styles.recentCardImage} />
-              <View style={styles.recentCardOverlay}>
-                <Text style={styles.recentCardTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.recentCardCity}>📍 {item.city}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {onLogout && (
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-          <Text style={styles.logoutBtnText}>Sair da Conta</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Modal Editar Dados Cadastrais */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.editModalContent}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.editModalTitle}>Editar Dados Cadastrais</Text>
-              <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                <Text style={styles.closeText}>✕</Text>
-              </TouchableOpacity>
+        {/* Card do Usuário */}
+        <View
+          style={[
+            styles.userCard,
+            {
+              backgroundColor: theme.cardBackgroundColor,
+              borderColor: theme.borderColor,
+            },
+          ]}
+        >
+          {user?.avatarUrl && !theme.hideDecorations ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: activeAccentColor }]}>
+              <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
             </View>
+          )}
 
-            <Text style={styles.inputLabel}>Nome Completo</Text>
-            <TextInput
-              style={styles.formInput}
-              value={editName}
-              onChangeText={setEditName}
-            />
-
-            <Text style={styles.inputLabel}>E-mail</Text>
-            <TextInput
-              style={styles.formInput}
-              value={editEmail}
-              onChangeText={setEditEmail}
-              keyboardType="email-address"
-            />
-
-            <Text style={styles.inputLabel}>Telefone / WhatsApp</Text>
-            <TextInput
-              style={styles.formInput}
-              value={editPhone}
-              onChangeText={setEditPhone}
-              keyboardType="phone-pad"
-            />
-
-            <TouchableOpacity style={styles.saveButtonOrange} onPress={handleSaveProfile}>
-              <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-            </TouchableOpacity>
+          <View style={styles.userInfo}>
+            <Text
+              style={[
+                styles.userName,
+                {
+                  color: theme.textColor,
+                  fontSize: 18 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                },
+              ]}
+            >
+              {userName}
+            </Text>
+            <Text
+              style={[
+                styles.userEmail,
+                {
+                  color: theme.secondaryTextColor,
+                  fontSize: 13 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                },
+              ]}
+            >
+              {userEmail}
+            </Text>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+
+        {/* Seção de Preferências de Acessibilidade */}
+        <Text
+          style={[
+            styles.sectionTitle,
+            {
+              color: theme.textColor,
+              fontSize: 16 * fontScale,
+              letterSpacing: theme.letterSpacing,
+            },
+          ]}
+        >
+          ⚙️ Preferências de Acessibilidade
+        </Text>
+
+        <View
+          style={[
+            styles.preferencesCard,
+            {
+              backgroundColor: theme.cardBackgroundColor,
+              borderColor: theme.borderColor,
+            },
+          ]}
+        >
+          {/* Controle de Tamanho de Fonte */}
+          <View style={styles.preferenceRow}>
+            <View style={styles.preferenceTextGroup}>
+              <Text style={[styles.preferenceLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                🔤 Tamanho da Fonte
+              </Text>
+              <Text style={[styles.preferenceSublabel, { color: theme.secondaryTextColor, fontSize: 12 * fontScale }]}>
+                Escala atual: {Math.round(fontScale * 100)}%
+              </Text>
+            </View>
+
+            <View style={styles.fontControls}>
+              <TouchableOpacity
+                style={[styles.fontButton, { borderColor: theme.borderColor }]}
+                onPress={handleDecreaseFont}
+                accessibilityLabel="Diminuir texto"
+              >
+                <Text style={{ color: theme.textColor, fontWeight: "bold", fontSize: 16 }}>A-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fontButton, { borderColor: theme.borderColor, backgroundColor: activeAccentColor }]}
+                onPress={handleIncreaseFont}
+                accessibilityLabel="Aumentar texto"
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 16 }}>A+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
+
+          {/* Toggle Modo Neurodivergente */}
+          <View style={styles.preferenceRow}>
+            <View style={styles.preferenceTextGroup}>
+              <Text style={[styles.preferenceLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                🧠 Modo Neurodivergente
+              </Text>
+              <Text style={[styles.preferenceSublabel, { color: theme.secondaryTextColor, fontSize: 12 * fontScale }]}>
+                Reduz distrações e imagens de fundo
+              </Text>
+            </View>
+
+            <Switch
+              value={isNeurodivergent}
+              onValueChange={handleToggleNeurodivergent}
+              trackColor={{ false: "#64748B", true: activeAccentColor }}
+              thumbColor={isNeurodivergent ? "#FFFFFF" : "#F1F5F9"}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
+
+          {/* Toggle Libras e Leitura por Voz */}
+          <View style={styles.preferenceRow}>
+            <View style={styles.preferenceTextGroup}>
+              <Text style={[styles.preferenceLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                🤟 Libras & Leitura de Voz
+              </Text>
+              <Text style={[styles.preferenceSublabel, { color: theme.secondaryTextColor, fontSize: 12 * fontScale }]}>
+                Habilita toque para ouvir os textos
+              </Text>
+            </View>
+
+            <Switch
+              value={librasEnabled}
+              onValueChange={handleToggleLibras}
+              trackColor={{ false: "#64748B", true: activeAccentColor }}
+              thumbColor={librasEnabled ? "#FFFFFF" : "#F1F5F9"}
+            />
+          </View>
+        </View>
+
+        {/* Botão de Logout */}
+        <TouchableOpacity
+          style={[styles.logoutButton, { borderColor: theme.borderColor }]}
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Sair do aplicativo"
+        >
+          <Text
+            style={[
+              styles.logoutText,
+              {
+                fontSize: 15 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            🚪 Sair da Conta
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  profileHeader: { alignItems: "center", paddingVertical: 24, paddingHorizontal: 16 },
-  avatarContainer: { position: "relative", marginBottom: 12 },
-  avatarImage: { width: 100, height: 100, borderRadius: 50 },
-  cameraBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#EA580C",
-    width: 32,
-    height: 32,
+  container: { flex: 1 },
+  headerTitle: { fontWeight: "bold", marginBottom: 16 },
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
     borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 14 },
+  avatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  avatarInitial: { color: "#FFFFFF", fontSize: 24, fontWeight: "bold" },
+  userInfo: { flex: 1 },
+  userName: { fontWeight: "bold", marginBottom: 2 },
+  userEmail: {},
+  sectionTitle: { fontWeight: "bold", marginBottom: 12 },
+  preferencesCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 28,
+  },
+  preferenceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  preferenceTextGroup: { flex: 1, paddingRight: 12 },
+  preferenceLabel: { fontWeight: "bold", marginBottom: 2 },
+  preferenceSublabel: {},
+  fontControls: { flexDirection: "row", gap: 8 },
+  fontButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  cameraIcon: { fontSize: 14 },
-  profileName: { color: "#0F172A", fontSize: 20, fontWeight: "bold" },
-  profileEmail: { color: "#64748B", fontSize: 13, marginBottom: 16 },
-  editProfileBtn: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#EA580C",
-  },
-  editProfileBtnText: { color: "#EA580C", fontWeight: "bold", fontSize: 13 },
-  infoCard: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  infoLabel: { color: "#64748B", fontSize: 11, fontWeight: "bold" },
-  infoValue: { color: "#0F172A", fontSize: 14, marginTop: 2 },
-  sectionHeader: { paddingHorizontal: 16, marginBottom: 12 },
-  sectionTitle: { color: "#0F172A", fontSize: 18, fontWeight: "bold" },
-  emptyText: { color: "#64748B", paddingHorizontal: 16, fontSize: 13 },
-  recentCard: { width: 140, height: 100, borderRadius: 14, overflow: "hidden", marginRight: 12 },
-  recentCardImage: { width: "100%", height: "100%" },
-  recentCardOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
-    padding: 6,
-  },
-  recentCardTitle: { color: "#FFFFFF", fontSize: 11, fontWeight: "bold" },
-  recentCardCity: { color: "#CBD5E1", fontSize: 9 },
-  logoutBtn: {
-    marginHorizontal: 16,
-    marginTop: 24,
+  divider: { height: 1, marginVertical: 8 },
+  logoutButton: {
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
     alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
   },
-  logoutBtnText: { color: "#EF4444", fontWeight: "bold", fontSize: 14 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  editModalContent: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-  modalHeaderRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
-  editModalTitle: { color: "#0F172A", fontSize: 18, fontWeight: "bold" },
-  closeText: { color: "#0F172A", fontSize: 18, fontWeight: "bold" },
-  inputLabel: { color: "#64748B", fontSize: 12, marginTop: 12, marginBottom: 4 },
-  formInput: {
-    backgroundColor: "#F1F5F9",
-    color: "#0F172A",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  saveButtonOrange: { backgroundColor: "#EA580C", paddingVertical: 14, borderRadius: 12, alignItems: "center", marginTop: 20 },
-  saveButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 15 },
+  logoutText: { color: "#EF4444", fontWeight: "bold" },
 });

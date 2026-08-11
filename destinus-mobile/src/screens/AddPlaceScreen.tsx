@@ -1,30 +1,53 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from "react-native";
 import { API_URL } from "../services/api";
+import { useAccessibility } from "./AccessibilityContext";
 
 interface AddPlaceScreenProps {
   onBack: () => void;
 }
 
 export function AddPlaceScreen({ onBack }: AddPlaceScreenProps) {
+  const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [featureInput, setFeatureInput] = useState("");
   const [features, setFeatures] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   function handleAddFeature() {
     if (featureInput.trim()) {
-      setFeatures([...features, featureInput.trim()]);
+      const newFeature = featureInput.trim();
+      setFeatures((prev) => [...prev, newFeature]);
       setFeatureInput("");
+      if (speak) speak(`Recurso ${newFeature} adicionado`);
     }
   }
 
+  function handleRemoveFeature(index: number, featureName: string) {
+    setFeatures((prev) => prev.filter((_, i) => i !== index));
+    if (speak) speak(`Recurso ${featureName} removido`);
+  }
+
   async function handleSavePlace() {
-    if (!name || !address) {
-      alert("Preencha o nome e o endereço do local!");
+    if (!name.trim() || !address.trim()) {
+      const msg = "Preencha o nome e o endereço do local!";
+      if (speak) speak(msg);
+      Alert.alert("Atenção", msg);
       return;
     }
+
+    setLoading(true);
 
     try {
       const response = await fetch(`${API_URL}/locais`, {
@@ -34,76 +57,247 @@ export function AddPlaceScreen({ onBack }: AddPlaceScreenProps) {
           name,
           address,
           imageUrl,
-          accessibilityFeatures: features.length > 0 ? features : ["Acessível"]
-        })
+          accessibilityFeatures: features.length > 0 ? features : ["Acessível"],
+        }),
       });
 
       if (response.ok) {
-        alert("Local cadastrado com sucesso!");
-        onBack();
+        const successMsg = "Local cadastrado com sucesso!";
+        if (speak) speak(successMsg);
+        Alert.alert("Sucesso", successMsg, [{ text: "OK", onPress: onBack }]);
       } else {
-        alert("Erro ao cadastrar local.");
+        const errorMsg = "Erro ao cadastrar local.";
+        if (speak) speak(errorMsg);
+        Alert.alert("Erro", errorMsg);
       }
     } catch (error) {
-      alert("Erro ao conectar ao servidor.");
+      const connMsg = "Erro ao conectar ao servidor.";
+      if (speak) speak(connMsg);
+      Alert.alert("Erro de Conexão", connMsg);
+    } finally {
+      setLoading(false);
     }
   }
 
+  const primaryBtnColor = isNeurodivergent ? theme.accentColor : "#2E7D32";
+  const addBtnColor = isNeurodivergent ? theme.accentColor : "#0066CC";
+
+  const dynamicInputStyle = [
+    styles.input,
+    {
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.borderColor,
+      color: theme.textColor,
+      fontSize: 14 * fontScale,
+      letterSpacing: theme.letterSpacing,
+      minHeight: Math.max(48, 48 * fontScale),
+    },
+  ];
+
+  const dynamicLabelStyle = [
+    styles.label,
+    {
+      color: theme.textColor,
+      fontSize: 14 * fontScale,
+      letterSpacing: theme.letterSpacing,
+      lineHeight: 18 * fontScale * theme.lineHeightMultiplier,
+    },
+  ];
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backBtnText}>← Voltar</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.backgroundColor }}
+      contentContainerStyle={styles.container}
+    >
+      {/* Botão Voltar */}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Voltar para a tela anterior"
+        onPress={onBack}
+        style={[styles.backBtn, { minHeight: Math.max(44, 44 * fontScale) }]}
+      >
+        <Text
+          style={[
+            styles.backBtnText,
+            {
+              color: isNeurodivergent ? theme.accentColor : "#0066CC",
+              fontSize: 16 * fontScale,
+            },
+          ]}
+        >
+          ← Voltar
+        </Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Cadastrar Novo Local 📍</Text>
+      <Text
+        style={[
+          styles.title,
+          {
+            color: theme.textColor,
+            fontSize: 24 * fontScale,
+            letterSpacing: theme.letterSpacing,
+          },
+        ]}
+      >
+        Cadastrar Novo Local 📍
+      </Text>
 
-      <Text style={styles.label}>Nome do Estabelecimento / Local</Text>
-      <TextInput style={styles.input} placeholder="Ex: Café Central" value={name} onChangeText={setName} />
+      {/* Nome */}
+      <Text style={dynamicLabelStyle}>Nome do Estabelecimento / Local *</Text>
+      <TextInput
+        accessibilityLabel="Nome do estabelecimento ou local, campo obrigatório"
+        accessibilityHint="Digite o nome do local"
+        style={dynamicInputStyle}
+        placeholder="Ex: Café Central"
+        placeholderTextColor={theme.secondaryTextColor}
+        value={name}
+        onChangeText={setName}
+      />
 
-      <Text style={styles.label}>Endereço Completo</Text>
-      <TextInput style={styles.input} placeholder="Ex: Av. Principal, 500 - Centro" value={address} onChangeText={setAddress} />
+      {/* Endereço */}
+      <Text style={dynamicLabelStyle}>Endereço Completo *</Text>
+      <TextInput
+        accessibilityLabel="Endereço completo, campo obrigatório"
+        accessibilityHint="Digite a rua, número e bairro"
+        style={dynamicInputStyle}
+        placeholder="Ex: Av. Principal, 500 - Centro"
+        placeholderTextColor={theme.secondaryTextColor}
+        value={address}
+        onChangeText={setAddress}
+      />
 
-      <Text style={styles.label}>Link da Foto (URL)</Text>
-      <TextInput style={styles.input} placeholder="http://exemplo.com/foto.jpg" value={imageUrl} onChangeText={setImageUrl} />
+      {/* URL da Imagem */}
+      <Text style={dynamicLabelStyle}>Link da Foto (URL)</Text>
+      <TextInput
+        accessibilityLabel="Link da foto do local em formato URL"
+        accessibilityHint="Insira a URL da imagem do local"
+        style={dynamicInputStyle}
+        placeholder="http://exemplo.com/foto.jpg"
+        placeholderTextColor={theme.secondaryTextColor}
+        value={imageUrl}
+        onChangeText={setImageUrl}
+        autoCapitalize="none"
+        keyboardType="url"
+      />
 
-      <Text style={styles.label}>Recursos de Acessibilidade</Text>
+      {/* Recursos de Acessibilidade */}
+      <Text style={dynamicLabelStyle}>Recursos de Acessibilidade</Text>
       <View style={styles.featureRow}>
         <TextInput
-          style={[styles.input, { flex: 1, marginBottom: 0 }]}
+          accessibilityLabel="Novo recurso de acessibilidade"
+          accessibilityHint="Digite um recurso como rampa de acesso ou piso tátil"
+          style={[dynamicInputStyle, { flex: 1, marginBottom: 0 }]}
           placeholder="Ex: Rampa de acesso"
+          placeholderTextColor={theme.secondaryTextColor}
           value={featureInput}
           onChangeText={setFeatureInput}
         />
-        <TouchableOpacity style={styles.addTagBtn} onPress={handleAddFeature}>
-          <Text style={styles.addTagText}>Add</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Adicionar recurso de acessibilidade"
+          style={[
+            styles.addTagBtn,
+            {
+              backgroundColor: addBtnColor,
+              minHeight: Math.max(48, 48 * fontScale),
+            },
+          ]}
+          onPress={handleAddFeature}
+        >
+          <Text style={[styles.addTagText, { fontSize: 14 * fontScale }]}>
+            Add
+          </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Lista de Tags com Remoção ao Clicar */}
       <View style={styles.tagsContainer}>
         {features.map((f, i) => (
-          <Text key={i} style={styles.tag}>✓ {f}</Text>
+          <TouchableOpacity
+            key={i}
+            accessibilityRole="button"
+            accessibilityLabel={`Recurso ${f}. Toque para remover.`}
+            onPress={() => handleRemoveFeature(i, f)}
+            style={[
+              styles.tag,
+              {
+                backgroundColor: theme.cardBackgroundColor,
+                borderColor: theme.borderColor,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.tagText,
+                {
+                  color: theme.textColor,
+                  fontSize: 12 * fontScale,
+                },
+              ]}
+            >
+              ✓ {f} ✕
+            </Text>
+          </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSavePlace}>
-        <Text style={styles.buttonText}>Salvar Local</Text>
+      {/* Botão Salvar */}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Salvar cadastro do local"
+        disabled={loading}
+        style={[
+          styles.button,
+          {
+            backgroundColor: primaryBtnColor,
+            opacity: loading ? 0.6 : 1,
+            minHeight: Math.max(48, 48 * fontScale),
+          },
+        ]}
+        onPress={handleSavePlace}
+      >
+        <Text style={[styles.buttonText, { fontSize: 16 * fontScale }]}>
+          {loading ? "Salvando..." : "Salvar Local"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, backgroundColor: "#fff" },
-  backBtn: { marginBottom: 12, marginTop: 10 },
-  backBtnText: { color: "#0066cc", fontSize: 16, fontWeight: "bold" },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 4 },
-  input: { backgroundColor: "#f9f9f9", borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginBottom: 12 },
+  container: { padding: 24, paddingBottom: 40 },
+  backBtn: { marginBottom: 12, marginTop: 10, justifyContent: "center" },
+  backBtnText: { fontWeight: "bold" },
+  title: { fontWeight: "bold", marginBottom: 20 },
+  label: { fontWeight: "600", marginBottom: 6, marginTop: 4 },
+  input: {
+    borderWidth: 2,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
   featureRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  addTagBtn: { backgroundColor: "#0066cc", paddingHorizontal: 16, borderRadius: 8, justifyContent: "center" },
-  addTagText: { color: "#fff", fontWeight: "bold" },
-  tagsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
-  tag: { backgroundColor: "#e1f5fe", color: "#0288d1", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, fontSize: 12 },
-  button: { backgroundColor: "#2e7d32", padding: 16, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" }
+  addTagBtn: {
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addTagText: { color: "#ffffff", fontWeight: "bold" },
+  tagsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  tag: {
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tagText: { fontWeight: "bold" },
+  button: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  buttonText: { color: "#ffffff", fontWeight: "bold" },
 });

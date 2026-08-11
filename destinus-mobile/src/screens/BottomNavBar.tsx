@@ -1,39 +1,31 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useAccessibility } from "./AccessibilityContext";
+import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 
 interface BottomNavBarProps {
   activeTab: string;
-  onSelectTab: (tab: string) => void;
+  onTabPress: (tabName: string) => void;
 }
 
-export function BottomNavBar({ activeTab, onSelectTab }: BottomNavBarProps) {
-  const { fontScale, getColors } = useAccessibility();
-  const colors = getColors();
-
+export function BottomNavBar({ activeTab, onTabPress }: BottomNavBarProps) {
   const tabs = [
     { id: "home", label: "Início", icon: "🏠" },
-    { id: "map", label: "Explorar", icon: "🗺️" },
-    { id: "experiences", label: "Passeios", icon: "📷" },
-    { id: "reservations", label: "Reservas", icon: "🧳" },
-    { id: "profile", label: "Perfil", icon: "👤" },
+    { id: "experiences", label: "Experiências", icon: "⭐" },
+    { id: "reservations", label: "Reservas", icon: "📅" },
+    { id: "add", label: "Adicionar", icon: "➕" },
   ];
 
   return (
-    <View style={[styles.navContainer, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+    <View style={styles.container}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <TouchableOpacity
             key={tab.id}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`Aba ${tab.label}`}
-            style={[styles.tabButton, isActive && { backgroundColor: colors.primary + "20" }]}
-            onPress={() => onSelectTab(tab.id)}
+            style={styles.tabItem}
+            onPress={() => onTabPress(tab.id)}
           >
-            <Text style={{ fontSize: 20 * fontScale }}>{tab.icon}</Text>
-            <Text style={[styles.tabLabel, { color: isActive ? colors.primary : colors.text, fontSize: 11 * fontScale }]}>
+            <Text style={styles.icon}>{tab.icon}</Text>
+            <Text style={[styles.label, isActive && styles.activeLabel]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -44,7 +36,17 @@ export function BottomNavBar({ activeTab, onSelectTab }: BottomNavBarProps) {
 }
 
 const styles = StyleSheet.create({
-  navContainer: { flexDirection: "row", justifyContent: "space-around", paddingVertical: 8, borderTopWidth: 1, elevation: 8 },
-  tabButton: { alignItems: "center", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12 },
-  tabLabel: { fontWeight: "bold", marginTop: 2 },
+  container: {
+    flexDirection: "row",
+    height: 60,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  tabItem: { alignItems: "center", justifyContent: "center", flex: 1 },
+  icon: { fontSize: 18 },
+  label: { fontSize: 12, color: "#64748B", marginTop: 2 },
+  activeLabel: { color: "#2563EB", fontWeight: "bold" },
 });

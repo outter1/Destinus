@@ -1,10 +1,32 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import axios from "axios";
-import { db } from "../config/db";
+import fs from "fs";
+import path from "path";
 
 const routes = Router();
 
-// Locais padrão de Duque de Caxias e Baixada Fluminense com acessibilidade detalhada
+// Leitura segura do db.json
+const getDbData = () => {
+  try {
+    const dbPath = path.resolve(__dirname, "../../db.json");
+    if (!fs.existsSync(dbPath)) return { places: [], notifications: [], reservations: [], users: [] };
+    const rawData = fs.readFileSync(dbPath, "utf-8");
+    return JSON.parse(rawData);
+  } catch {
+    return { places: [], notifications: [], reservations: [], users: [] };
+  }
+};
+
+// Gravação segura no db.json
+const saveDbData = (data: any) => {
+  try {
+    const dbPath = path.resolve(__dirname, "../../db.json");
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Erro ao salvar db.json:", err);
+  }
+};
+
 const defaultPlaces = [
   {
     id: "caxias_1",
@@ -108,7 +130,6 @@ const defaultPlaces = [
   },
 ];
 
-// Notificações padrão para experiência inicial do usuário
 const defaultNotifications = [
   {
     id: "notif_1",
@@ -136,21 +157,22 @@ const defaultNotifications = [
   },
 ];
 
-// 1. Busca de Locais e Destinos (Banco Local + Mapeamento de Comércios da Baixada via Overpass)
-routes.get("/locais", async (req, res) => {
-  const { query, category } = req.query;
-  const data = db.read();
+// 1. Locais e Destinos
+const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
+  const queryStr = typeof req.query.query === "string" ? req.query.query.toLowerCase() : "";
+  const categoryStr = typeof req.query.category === "string" ? req.query.category : "";
+  const necessidadeStr = typeof req.query.necessidade === "string" ? req.query.necessidade.toLowerCase() : "";
 
-  // Inicializa o db.json com os locais padrão se estiver vazio
+  const data = getDbData();
+
   if (!data.places || data.places.length === 0) {
     data.places = defaultPlaces;
-    db.write(data);
+    saveDbData(data);
   }
 
   let dbPlaces = data.places || [];
   let dynamicPlaces: any[] = [];
 
-  // Busca comércios e pontos da Baixada via Overpass API
   try {
     const overpassQuery = `
       [out:json][timeout:15];
@@ -222,78 +244,93 @@ routes.get("/locais", async (req, res) => {
     console.log("Erro ao carregar locais via Overpass API:", err);
   }
 
-  // Mescla banco local + comércios dinâmicos sem duplicar
   const existingNames = new Set(dbPlaces.map((p: any) => p.name?.toLowerCase()));
   const uniqueDynamic = dynamicPlaces.filter((p: any) => !existingNames.has(p.name?.toLowerCase()));
   let allPlaces = [...dbPlaces, ...uniqueDynamic];
 
-  // Aplica filtro por Categoria
-  if (category && category !== "Todos" && category !== "Roteiros") {
-    const cat = String(category).toLowerCase();
+  if (categoryStr && categoryStr !== "Todos" && categoryStr !== "Roteiros") {
+    const cat = categoryStr.toLowerCase();
     allPlaces = allPlaces.filter((p: any) => {
       const pCategory = (p.category || "").toLowerCase();
       return pCategory.includes(cat) || cat.includes(pCategory);
     });
   }
 
-  // Aplica filtro por busca textual
-  if (query) {
-    const q = String(query).toLowerCase();
+  if (queryStr) {
     allPlaces = allPlaces.filter(
       (p: any) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.address?.toLowerCase().includes(q) ||
-        p.city?.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(queryStr) ||
+        p.address?.toLowerCase().includes(queryStr) ||
+        p.city?.toLowerCase().includes(queryStr)
     );
   }
 
-  return res.json(allPlaces);
-});
+  if (necessidadeStr) {
+    allPlaces = allPlaces.filter((p: any) => {
+      const acc = p.accessibilityDetails || {};
+      if (necessidadeStr === "cadeirante" || necessidadeStr === "wheelchair") {
+        return acc.wheelchair || acc.cadeirante?.rampa || acc.adaptedRestroom;
+      }
+      if (necessidadeStr === "visual" || necessidadeStr === "blind") {
+        return acc.blind || acc.tactilePaving || acc.visual?.pisoTatil;
+      }
+      if (necessidadeStr === "auditiva" || necessidadeStr === "hearing" || necessidadeStr === "surdo") {
+        return acc.hearing || acc.auditiva?.interpreteLibras;
+      }
+      if (necessidadeStr === "neurodivergente" || necessidadeStr === "autismo") {
+        return acc.neurodivergent || acc.neurodivergente?.espacoSilencioso;
+      }
+      return true;
+    });
+  }
 
-// 2. Notificações e Alertas
-routes.get("/notificacoes", (req, res) => {
-  const data = db.read();
+  res.json(allPlaces);
+};
+
+routes.get("/locais", handleGetLocais);
+routes.get("/destinos", handleGetLocais);
+
+// 2. Notificações
+routes.get("/notificacoes", (_req: Request, res: Response): void => {
+  const data = getDbData();
   if (!data.notifications || data.notifications.length === 0) {
     data.notifications = defaultNotifications;
-    db.write(data);
+    saveDbData(data);
   }
-  return res.json(data.notifications);
+  res.json(data.notifications);
 });
 
-routes.put("/notificacoes/ler-todas", (req, res) => {
-  const data = db.read();
+routes.put("/notificacoes/ler-todas", (_req: Request, res: Response): void => {
+  const data = getDbData();
   if (data.notifications) {
     data.notifications = data.notifications.map((n: any) => ({ ...n, read: true }));
-    db.write(data);
+    saveDbData(data);
   }
-  return res.json({ message: "Todas as notificações foram marcadas como lidas." });
+  res.json({ message: "Todas as notificações foram marcadas como lidas." });
 });
 
-// 3. Experiências e Passeios
-routes.get("/experiencias", (req, res) => {
-  const { category } = req.query;
-  const data = db.read();
+// 3. Experiências
+routes.get("/experiencias", (req: Request, res: Response): void => {
+  const categoryStr = typeof req.query.category === "string" ? req.query.category.toLowerCase() : "";
+  const data = getDbData();
   let exps = data.experiences || [];
 
-  if (category && category !== "Todos") {
-    exps = exps.filter(
-      (e: any) => e.category?.toLowerCase() === String(category).toLowerCase()
-    );
+  if (categoryStr && categoryStr !== "todos") {
+    exps = exps.filter((e: any) => e.category?.toLowerCase() === categoryStr);
   }
 
-  return res.json(exps);
+  res.json(exps);
 });
 
-// 4. Minhas Reservas
-routes.get("/reservas", (req, res) => {
-  const data = db.read();
-  return res.json(data.reservations || []);
+// 4. Reservas
+routes.get("/reservas", (_req: Request, res: Response): void => {
+  const data = getDbData();
+  res.json(data.reservations || []);
 });
 
-// 5. Criar Nova Reserva e Notificar
-routes.post("/reservas", (req, res) => {
+routes.post("/reservas", (req: Request, res: Response): void => {
   const { title, type, date, detail, merchantUrl } = req.body;
-  const data = db.read();
+  const data = getDbData();
 
   const newReservation = {
     id: `res_${Date.now()}`,
@@ -310,7 +347,6 @@ routes.post("/reservas", (req, res) => {
   data.reservations = data.reservations || [];
   data.reservations.unshift(newReservation);
 
-  // Gera notificação automática ao criar reserva
   data.notifications = data.notifications || defaultNotifications;
   data.notifications.unshift({
     id: `notif_${Date.now()}`,
@@ -321,18 +357,18 @@ routes.post("/reservas", (req, res) => {
     type: "reservation",
   });
 
-  db.write(data);
+  saveDbData(data);
 
-  return res.status(201).json({
+  res.status(201).json({
     message: "Reserva realizada com sucesso!",
     reservation: newReservation,
   });
 });
 
-// 6. Autenticação e Perfil de Usuário
-routes.post("/cadastro", (req, res) => {
+// 5. Autenticação e Perfil
+routes.post("/cadastro", (req: Request, res: Response): void => {
   const { name, email, password, needs, disabilities, preferences } = req.body;
-  const data = db.read();
+  const data = getDbData();
 
   const newUser = {
     id: String(Date.now()),
@@ -340,59 +376,37 @@ routes.post("/cadastro", (req, res) => {
     email,
     password,
     photoUrl: "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
-    needs: needs || {
-      wheelchair: false,
-      visual: false,
-      hearing: false,
-      neurodivergent: false,
-    },
-    disabilities: disabilities || {
-      wheelchair: false,
-      blind: false,
-      lowVision: false,
-      deaf: false,
-      autism: false,
-      epilepsy: false,
-    },
-    preferences: preferences || {
-      trails: false,
-      walks: false,
-      beaches: false,
-      culture: false,
-      gastronomy: false,
-    },
+    needs: needs || { wheelchair: false, visual: false, hearing: false, neurodivergent: false },
+    disabilities: disabilities || { wheelchair: false, blind: false, lowVision: false, deaf: false, autism: false, epilepsy: false },
+    preferences: preferences || { trails: false, walks: false, beaches: false, culture: false, gastronomy: false },
   };
 
   data.users = data.users || [];
   data.users.push(newUser);
-  db.write(data);
+  saveDbData(data);
 
-  return res
-    .status(201)
-    .json({ message: "Usuário cadastrado com sucesso!", user: newUser });
+  res.status(201).json({ message: "Usuário cadastrado com sucesso!", user: newUser });
 });
 
-routes.post("/login", (req, res) => {
+routes.post("/login", (req: Request, res: Response): void => {
   const { email, password } = req.body;
-  const data = db.read();
+  const data = getDbData();
 
   const allUsers = [...(data.users || []), ...(data.usuarios || [])];
-  const user = allUsers.find(
-    (u: any) => u.email === email && u.password === password
-  );
+  const user = allUsers.find((u: any) => u.email === email && u.password === password);
 
   if (!user) {
-    return res.status(401).json({ message: "E-mail ou senha inválidos" });
+    res.status(401).json({ message: "E-mail ou senha inválidos" });
+    return;
   }
 
-  return res.json({ message: "Login realizado com sucesso!", user });
+  res.json({ message: "Login realizado com sucesso!", user });
 });
 
-// 7. Atualizar Foto de Perfil
-routes.put("/usuarios/:id/foto", (req, res) => {
+routes.put("/usuarios/:id/foto", (req: Request, res: Response): void => {
   const { id } = req.params;
   const { photoUrl } = req.body;
-  const data = db.read();
+  const data = getDbData();
 
   let user = (data.users || []).find((u: any) => String(u.id) === String(id));
   if (!user) {
@@ -400,13 +414,14 @@ routes.put("/usuarios/:id/foto", (req, res) => {
   }
 
   if (!user) {
-    return res.status(404).json({ message: "Usuário não encontrado" });
+    res.status(404).json({ message: "Usuário não encontrado" });
+    return;
   }
 
   user.photoUrl = photoUrl;
-  db.write(data);
+  saveDbData(data);
 
-  return res.json({ message: "Foto atualizada com sucesso!", photoUrl: user.photoUrl, user });
+  res.json({ message: "Foto atualizada com sucesso!", photoUrl: user.photoUrl, user });
 });
 
 export default routes;

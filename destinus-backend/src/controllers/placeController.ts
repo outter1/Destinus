@@ -1,41 +1,57 @@
 import { Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 
 export const getDestinosBaixada = (req: Request, res: Response) => {
-  const locaisBaixada = [
-    {
-      id: "1",
-      name: "Parque Natural Municipal da Taquara",
-      city: "Duque de Caxias - RJ",
-      category: "Trilhas & Natureza",
-      imageUrl: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80",
-      rating: 4.8,
-      accessible: true,
-      latitude: -22.6225,
-      longitude: -43.2351,
-    },
-    {
-      id: "2",
-      name: "Museu Vivo do São Bento",
-      city: "Duque de Caxias - RJ",
-      category: "Cultura & História",
-      imageUrl: "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=600&q=80",
-      rating: 4.7,
-      accessible: true,
-      latitude: -22.7381,
-      longitude: -43.3089,
-    },
-    {
-      id: "3",
-      name: "Reserva Biológica do Tinguá",
-      city: "Nova Iguaçu / Caxias - RJ",
-      category: "Ecoturismo",
-      imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80",
-      rating: 4.9,
-      accessible: false,
-      latitude: -22.5833,
-      longitude: -43.4333,
-    },
-  ];
+  try {
+    const { necessidade, category, query } = req.query;
 
-  return res.json(locaisBaixada);
+    // Carrega o arquivo db.json da raiz do backend
+    const dbPath = path.resolve(__dirname, "../../db.json");
+    const rawData = fs.readFileSync(dbPath, "utf-8");
+    const db = JSON.parse(rawData);
+
+    let places = db.places || [];
+
+    // 1. Filtro por termo de busca (nome ou cidade)
+    if (query && typeof query === "string") {
+      const searchTerm = query.toLowerCase();
+      places = places.filter(
+        (p: any) =>
+          p.name.toLowerCase().includes(searchTerm) ||
+          (p.city && p.city.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // 2. Filtro por Categoria
+    if (category && typeof category === "string" && category !== "Todos") {
+      places = places.filter((p: any) => p.category === category);
+    }
+
+    // 3. Filtro por Necessidade de Acessibilidade
+    if (necessidade && typeof necessidade === "string") {
+      places = places.filter((p: any) => {
+        const acc = p.accessibilityDetails;
+        if (!acc) return false;
+
+        switch (necessidade) {
+          case "cadeirante":
+            return acc.cadeirante?.rampa || acc.cadeirante?.elevador || acc.adaptedRestroom;
+          case "visual":
+            return acc.visual?.pisoTatil || acc.visual?.audioguia || acc.visual?.textoBraille;
+          case "auditiva":
+            return acc.auditiva?.interpreteLibras || acc.auditiva?.legendaEmVideos;
+          case "neurodivergente":
+            return acc.neurodivergente?.espacoSilencioso || acc.neurodivergente?.horarioSensorialSuave;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return res.json(places);
+  } catch (error) {
+    console.error("Erro ao buscar locais no db.json:", error);
+    return res.status(500).json({ error: "Erro interno ao buscar locais." });
+  }
 };

@@ -3,18 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
-  TouchableOpacity,
   ScrollView,
+  Image,
+  Pressable,
   SafeAreaView,
   Linking,
-  Alert,
 } from "react-native";
+import { useAccessibility } from "./AccessibilityContext";
 
 export interface Place {
   id: string;
   name: string;
-  city?: string;
+  city: string;
   category: string;
   address: string;
   rating: number;
@@ -24,72 +24,256 @@ export interface Place {
   accessibilityDetails?: {
     wheelchair?: string | boolean;
     blind?: string | boolean;
-    tactilePaving?: boolean;
-    adaptedRestroom?: boolean;
+    neurodivergent?: string | boolean;
   };
 }
 
-export interface PlaceDetailScreenProps {
+interface PlaceDetailScreenProps {
   place: Place;
-  onBack: () => void;
+  onBack?: () => void;
+  onReserve?: (place: Place) => void;
 }
 
-export function PlaceDetailScreen({ place, onBack }: PlaceDetailScreenProps) {
-  const openMap = (url: string) => {
-    if (url) {
-      Linking.openURL(url).catch(() =>
-        Alert.alert("Erro", "Não foi possível abrir o mapa.")
+export function PlaceDetailScreen({ place, onBack, onReserve }: PlaceDetailScreenProps) {
+  const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+
+  if (!place) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        <Text style={{ color: theme.textColor, padding: 20 }}>Local não encontrado.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#F97316";
+
+  const handleOpenMaps = () => {
+    if (place.googleMapsUrl) {
+      if (speak) speak("Abrindo localização no Google Maps");
+      Linking.openURL(place.googleMapsUrl).catch((err) =>
+        console.error("Erro ao abrir mapa:", err)
       );
     }
   };
 
+  const handleReserve = () => {
+    if (speak) speak(`Iniciando reserva para ${place.name}`);
+    if (onReserve) onReserve(place);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        {/* Imagem de Capa e Botão Voltar */}
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: place.imageUrl }} style={styles.detailImage} />
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>← Voltar</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Botão de Voltar */}
+        <View style={styles.topBar}>
+          <Pressable
+            style={[
+              styles.backButton,
+              { backgroundColor: theme.cardBackgroundColor, borderColor: theme.borderColor },
+            ]}
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar para a tela anterior"
+          >
+            <Text style={{ color: theme.textColor, fontSize: 16 * fontScale, fontWeight: "bold" }}>
+              ← Voltar
+            </Text>
+          </Pressable>
         </View>
 
-        {/* Informações do Local */}
-        <View style={styles.body}>
-          <View style={styles.headerRow}>
-            <Text style={styles.categoryBadge}>{place.category.toUpperCase()}</Text>
-            <View style={styles.ratingBadge}>
-              <Text style={styles.ratingText}>⭐ {place.rating || "4.5"}</Text>
-            </View>
-          </View>
+        {/* Imagem principal (ocultada no modo neurodivergente/sem distrações) */}
+        {!theme.hideDecorations && (
+          <Image source={{ uri: place.imageUrl }} style={styles.heroImage} />
+        )}
 
-          <Text style={styles.title}>{place.name}</Text>
-          <Text style={styles.address}>📍 {place.address}</Text>
+        <View style={styles.content}>
+          {/* Categoria e Nome */}
+          <Text
+            style={[
+              styles.category,
+              {
+                color: activeAccentColor,
+                fontSize: 12 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            {place.category ? place.category.toUpperCase() : "TURISMO"}
+          </Text>
 
-          {place.description && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sobre o Local</Text>
-              <Text style={styles.sectionText}>{place.description}</Text>
-            </View>
-          )}
+          <Text
+            style={[
+              styles.title,
+              {
+                color: theme.textColor,
+                fontSize: 24 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            {place.name}
+          </Text>
 
-          {place.accessibilityDetails && (
-            <View style={styles.accessBox}>
-              <Text style={styles.accessTitle}>♿ Acessibilidade:</Text>
-              <Text style={styles.accessText}>
-                • {typeof place.accessibilityDetails.wheelchair === "string"
-                    ? place.accessibilityDetails.wheelchair
-                    : "Acesso para cadeirantes disponível"}
+          <Text
+            style={[
+              styles.address,
+              {
+                color: theme.secondaryTextColor,
+                fontSize: 14 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            📍 {place.address || place.city}
+          </Text>
+
+          {/* Avaliação */}
+          {place.rating && (
+            <View
+              style={[
+                styles.ratingBadge,
+                { backgroundColor: theme.cardBackgroundColor, borderColor: theme.borderColor },
+              ]}
+            >
+              <Text style={{ color: "#EAB308", fontSize: 14 * fontScale, fontWeight: "bold" }}>
+                ⭐ {place.rating} / 5.0
               </Text>
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.mapButton}
-            onPress={() => openMap(place.googleMapsUrl)}
+          {/* Card de Detalhes de Acessibilidade (Alto Contraste) */}
+          <View
+            style={[
+              styles.accessibilityCard,
+              {
+                backgroundColor: theme.cardBackgroundColor,
+                borderColor: activeAccentColor,
+              },
+            ]}
           >
-            <Text style={styles.mapButtonText}>📍 Abrir no Google Maps</Text>
-          </TouchableOpacity>
+            <Text
+              style={[
+                styles.sectionHeader,
+                {
+                  color: theme.textColor,
+                  fontSize: 16 * fontScale,
+                  letterSpacing: theme.letterSpacing,
+                },
+              ]}
+            >
+              ♿ Recursos de Acessibilidade
+            </Text>
+
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                👩‍🦽 Mobilidade:
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.secondaryTextColor, fontSize: 13 * fontScale }]}>
+                {typeof place.accessibilityDetails?.wheelchair === "string"
+                  ? place.accessibilityDetails.wheelchair
+                  : place.accessibilityDetails?.wheelchair
+                  ? "Acesso adaptado disponível"
+                  : "Não informado"}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                👁️ Deficiência Visual:
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.secondaryTextColor, fontSize: 13 * fontScale }]}>
+                {typeof place.accessibilityDetails?.blind === "string"
+                  ? place.accessibilityDetails.blind
+                  : place.accessibilityDetails?.blind
+                  ? "Recursos táteis/sonoros disponíveis"
+                  : "Não informado"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Descrição */}
+          {place.description && (
+            <View style={styles.section}>
+              <Text
+                style={[
+                  styles.sectionHeader,
+                  {
+                    color: theme.textColor,
+                    fontSize: 16 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                  },
+                ]}
+              >
+                Sobre o Local
+              </Text>
+              <Text
+                style={[
+                  styles.descriptionText,
+                  {
+                    color: theme.textColor,
+                    fontSize: 14 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                    lineHeight: (14 * fontScale) * 1.5,
+                  },
+                ]}
+              >
+                {place.description}
+              </Text>
+            </View>
+          )}
+
+          {/* Ações: Mapa e Reserva */}
+          <View style={styles.actionContainer}>
+            {place.googleMapsUrl && (
+              <Pressable
+                style={[
+                  styles.secondaryButton,
+                  {
+                    backgroundColor: theme.cardBackgroundColor,
+                    borderColor: theme.borderColor,
+                  },
+                ]}
+                onPress={handleOpenMaps}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir localização no Google Maps"
+              >
+                <Text
+                  style={{
+                    color: theme.textColor,
+                    fontSize: 14 * fontScale,
+                    fontWeight: "bold",
+                    letterSpacing: theme.letterSpacing,
+                  }}
+                >
+                  🗺️ Abrir no Mapa
+                </Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[
+                styles.primaryButton,
+                {
+                  backgroundColor: activeAccentColor,
+                },
+              ]}
+              onPress={handleReserve}
+              accessibilityRole="button"
+              accessibilityLabel={`Fazer reserva para ${place.name}`}
+            >
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  {
+                    fontSize: 16 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                  },
+                ]}
+              >
+                📅 Fazer Reserva
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -97,107 +281,54 @@ export function PlaceDetailScreen({ place, onBack }: PlaceDetailScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0F172A",
-  },
-  imageContainer: {
-    position: "relative",
-  },
-  detailImage: {
-    width: "100%",
-    height: 250,
-  },
+  container: { flex: 1 },
+  topBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   backButton: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  backButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  body: {
-    padding: 20,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  categoryBadge: {
-    color: "#38BDF8",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
+  heroImage: { width: "100%", height: 220 },
+  content: { padding: 16 },
+  category: { fontWeight: "bold", marginBottom: 4 },
+  title: { fontWeight: "bold", marginBottom: 6 },
+  address: { marginBottom: 12 },
   ratingBadge: {
-    backgroundColor: "#334155",
-    paddingHorizontal: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
   },
-  ratingText: {
-    color: "#F59E0B",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  address: {
-    color: "#94A3B8",
-    fontSize: 13,
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  sectionText: {
-    color: "#CBD5E1",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  accessBox: {
-    backgroundColor: "#1E293B",
+  accessibilityCard: {
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
+    borderRadius: 14,
+    borderWidth: 2,
+    marginBottom: 20,
   },
-  accessTitle: {
-    color: "#38BDF8",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  accessText: {
-    color: "#CBD5E1",
-    fontSize: 13,
-    marginTop: 6,
-  },
-  mapButton: {
-    backgroundColor: "#2563EB",
+  sectionHeader: { fontWeight: "bold", marginBottom: 10 },
+  detailRow: { marginBottom: 8 },
+  detailLabel: { fontWeight: "bold" },
+  detailValue: { marginTop: 2 },
+  section: { marginBottom: 20 },
+  descriptionText: {},
+  actionContainer: { marginTop: 10, gap: 12 },
+  secondaryButton: {
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center",
+    borderWidth: 1,
   },
-  mapButtonText: {
+  primaryButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  primaryButtonText: {
     color: "#FFFFFF",
     fontWeight: "bold",
-    fontSize: 15,
   },
 });

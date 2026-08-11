@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
 } from "react-native";
+import { useAccessibility } from "./AccessibilityContext";
 
 export interface Place {
   id: string;
@@ -80,9 +81,14 @@ interface ExperiencesScreenProps {
 }
 
 export function ExperiencesScreen({ onSelectPlace }: ExperiencesScreenProps) {
+  const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+
   const [places] = useState<Place[]>(DEFAULT_PLACES);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+
+  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#EA580C";
+  const headerBgColor = isNeurodivergent ? theme.cardBackgroundColor : "#EA580C";
 
   const filteredPlaces = useMemo(() => {
     return places.filter((p) => {
@@ -101,20 +107,61 @@ export function ExperiencesScreen({ onSelectPlace }: ExperiencesScreenProps) {
   }, [places, selectedCategory, searchQuery]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
-      {/* Cabeçalho Laranja sem emojis no título */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerSubtitle}>Explorar a região</Text>
-        <Text style={styles.headerTitle}>Para onde vamos hoje?</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.backgroundColor }]}
+      contentContainerStyle={{ paddingBottom: 30 }}
+    >
+      {/* Cabeçalho Acessível */}
+      <View style={[styles.headerContainer, { backgroundColor: headerBgColor }]}>
+        <Text
+          style={[
+            styles.headerSubtitle,
+            {
+              color: isNeurodivergent ? theme.secondaryTextColor : "#FFEDD5",
+              fontSize: 14 * fontScale,
+              letterSpacing: theme.letterSpacing,
+            },
+          ]}
+        >
+          Explorar a região
+        </Text>
+        <Text
+          style={[
+            styles.headerTitle,
+            {
+              color: isNeurodivergent ? theme.textColor : "#FFFFFF",
+              fontSize: 24 * fontScale,
+              letterSpacing: theme.letterSpacing,
+              lineHeight: 28 * fontScale * theme.lineHeightMultiplier,
+            },
+          ]}
+        >
+          Para onde vamos hoje?
+        </Text>
 
-        <View style={styles.searchBox}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: theme.cardBackgroundColor,
+              borderColor: theme.borderColor,
+            },
+          ]}
+        >
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              {
+                color: theme.textColor,
+                fontSize: 14 * fontScale,
+              },
+            ]}
             placeholder="Buscar em Caxias e região..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={theme.secondaryTextColor}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            accessibilityLabel="Campo de busca de locais"
           />
         </View>
       </View>
@@ -127,11 +174,37 @@ export function ExperiencesScreen({ onSelectPlace }: ExperiencesScreenProps) {
             return (
               <TouchableOpacity
                 key={cat.id}
-                style={[styles.categoryCard, isSelected && styles.selectedCategoryCard]}
-                onPress={() => setSelectedCategory(cat.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filtro ${cat.label}`}
+                style={[
+                  styles.categoryCard,
+                  {
+                    backgroundColor: isSelected
+                      ? isNeurodivergent
+                        ? theme.borderColor
+                        : "#FFF7ED"
+                      : theme.cardBackgroundColor,
+                    borderColor: isSelected ? activeAccentColor : theme.borderColor,
+                  },
+                ]}
+                onPress={() => {
+                  setSelectedCategory(cat.id);
+                  if (speak) speak(`Filtro ${cat.label} selecionado`);
+                }}
               >
-                <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                <Text style={[styles.categoryLabel, isSelected && styles.selectedCategoryLabel]}>
+                {!theme.hideDecorations && (
+                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                )}
+                <Text
+                  style={[
+                    styles.categoryLabel,
+                    {
+                      color: isSelected ? activeAccentColor : theme.secondaryTextColor,
+                      fontSize: 12 * fontScale,
+                      letterSpacing: theme.letterSpacing,
+                    },
+                  ]}
+                >
                   {cat.label}
                 </Text>
               </TouchableOpacity>
@@ -142,24 +215,110 @@ export function ExperiencesScreen({ onSelectPlace }: ExperiencesScreenProps) {
 
       {/* Lista de Destinos */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Experiências Disponíveis</Text>
+        <Text
+          style={[
+            styles.sectionTitle,
+            {
+              color: theme.textColor,
+              fontSize: 18 * fontScale,
+              letterSpacing: theme.letterSpacing,
+            },
+          ]}
+        >
+          Experiências Disponíveis
+        </Text>
       </View>
 
       <View style={styles.verticalList}>
         {filteredPlaces.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum local encontrado para esta busca.</Text>
+          <Text
+            style={[
+              styles.emptyText,
+              {
+                color: theme.secondaryTextColor,
+                fontSize: 13 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            Nenhum local encontrado para esta busca.
+          </Text>
         ) : (
           filteredPlaces.map((item) => (
             <TouchableOpacity
               key={item.id}
-              style={styles.placeCard}
-              onPress={() => onSelectPlace && onSelectPlace(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}, em ${item.city}`}
+              style={[
+                styles.placeCard,
+                {
+                  backgroundColor: theme.cardBackgroundColor,
+                  borderColor: theme.borderColor,
+                },
+              ]}
+              onPress={() => {
+                const textToSpeak = `${item.name}. ${item.description || ""} Cidade: ${item.city}`;
+                if (speak) speak(textToSpeak);
+                if (onSelectPlace) onSelectPlace(item);
+              }}
             >
-              <Image source={{ uri: item.imageUrl }} style={styles.placeImage} />
+              {!theme.hideDecorations && (
+                <Image source={{ uri: item.imageUrl }} style={styles.placeImage} />
+              )}
               <View style={styles.placeInfo}>
-                <Text style={styles.placeCategory}>{item.category.toUpperCase()}</Text>
-                <Text style={styles.placeName}>{item.name}</Text>
-                <Text style={styles.placeCity}>📍 {item.city}</Text>
+                <Text
+                  style={[
+                    styles.placeCategory,
+                    {
+                      color: activeAccentColor,
+                      fontSize: 10 * fontScale,
+                      letterSpacing: theme.letterSpacing,
+                    },
+                  ]}
+                >
+                  {item.category.toUpperCase()}
+                </Text>
+                <Text
+                  style={[
+                    styles.placeName,
+                    {
+                      color: theme.textColor,
+                      fontSize: 15 * fontScale,
+                      letterSpacing: theme.letterSpacing,
+                      lineHeight: 18 * fontScale * theme.lineHeightMultiplier,
+                    },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+                {item.description && (
+                  <Text
+                    style={[
+                      styles.placeDescription,
+                      {
+                        color: theme.secondaryTextColor,
+                        fontSize: 12 * fontScale,
+                        letterSpacing: theme.letterSpacing,
+                        lineHeight: 16 * fontScale * theme.lineHeightMultiplier,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {item.description}
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.placeCity,
+                    {
+                      color: theme.secondaryTextColor,
+                      fontSize: 11 * fontScale,
+                      letterSpacing: theme.letterSpacing,
+                    },
+                  ]}
+                >
+                  📍 {item.city}
+                </Text>
               </View>
             </TouchableOpacity>
           ))
@@ -170,31 +329,29 @@ export function ExperiencesScreen({ onSelectPlace }: ExperiencesScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
   headerContainer: {
-    backgroundColor: "#EA580C",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 28,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
   },
-  headerSubtitle: { color: "#FFEDD5", fontSize: 14 },
-  headerTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "bold", marginTop: 4 },
+  headerSubtitle: { marginBottom: 2 },
+  headerTitle: { fontWeight: "bold", marginTop: 4 },
   searchBox: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     alignItems: "center",
     paddingHorizontal: 14,
     height: 48,
     marginTop: 16,
+    borderWidth: 1,
   },
   searchIcon: { fontSize: 16, marginRight: 10 },
-  searchInput: { flex: 1, color: "#0F172A", fontSize: 14 },
+  searchInput: { flex: 1 },
   categoriesWrapper: { marginTop: 16, paddingLeft: 16 },
   categoryCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     width: 80,
     height: 80,
@@ -202,29 +359,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
   },
-  selectedCategoryCard: { borderColor: "#EA580C", backgroundColor: "#FFF7ED" },
   categoryIcon: { fontSize: 24, marginBottom: 4 },
-  categoryLabel: { color: "#64748B", fontSize: 12, fontWeight: "600" },
-  selectedCategoryLabel: { color: "#EA580C", fontWeight: "bold" },
+  categoryLabel: { fontWeight: "600" },
   sectionHeader: { paddingHorizontal: 16, marginTop: 20, marginBottom: 12 },
-  sectionTitle: { color: "#0F172A", fontSize: 18, fontWeight: "bold" },
+  sectionTitle: { fontWeight: "bold" },
   verticalList: { paddingHorizontal: 16 },
   placeCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   placeImage: { width: 80, height: 80, borderRadius: 12, marginRight: 12 },
   placeInfo: { flex: 1 },
-  placeCategory: { color: "#EA580C", fontSize: 10, fontWeight: "bold", marginBottom: 2 },
-  placeName: { color: "#0F172A", fontSize: 15, fontWeight: "bold", marginBottom: 4 },
-  placeCity: { color: "#64748B", fontSize: 12 },
-  emptyText: { color: "#64748B", fontSize: 13, paddingHorizontal: 16 },
+  placeCategory: { fontWeight: "bold", marginBottom: 2 },
+  placeName: { fontWeight: "bold", marginBottom: 4 },
+  placeDescription: { marginBottom: 4 },
+  placeCity: { marginTop: 2 },
+  emptyText: { paddingHorizontal: 16 },
 });

@@ -1,18 +1,43 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Image, Pressable, Linking } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Image,
+  Pressable,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+} from "react-native";
+import { WebView } from "react-native-webview";
 import { useAccessibility } from "./AccessibilityContext";
 import { API_URL } from "../services/api";
 
-interface ExploreMapScreenProps {
-  onSelectPlace?: (place: any) => void;
+export interface Place {
+  id: string;
+  name: string;
+  city: string;
+  category: string;
+  address: string;
+  rating: number;
+  imageUrl: string;
+  googleMapsUrl: string;
+  description?: string;
 }
 
-export function ExploreMapScreen({ onSelectPlace }: ExploreMapScreenProps) {
-  const { fontScale, getColors } = useAccessibility();
-  const colors = getColors();
+interface ExploreMapScreenProps {
+  onSelectPlace?: (place: Place) => void;
+}
 
-  const [places, setPlaces] = useState<any[]>([]);
+const CITIES = ["Todas", "Duque de Caxias", "Nova Iguaçu", "São João de Meriti", "Rio de Janeiro"];
+
+export function ExploreMapScreen({ onSelectPlace }: ExploreMapScreenProps) {
+  const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+
+  const [places, setPlaces] = useState<Place[]>([]);
   const [selectedCity, setSelectedCity] = useState("Todas");
+  const [showMap, setShowMap] = useState(true);
 
   useEffect(() => {
     fetch(`${API_URL}/locais`)
@@ -21,95 +46,272 @@ export function ExploreMapScreen({ onSelectPlace }: ExploreMapScreenProps) {
       .catch((err) => console.log("Erro ao carregar locais:", err));
   }, []);
 
-  const filteredPlaces = selectedCity === "Todas" 
-    ? places 
-    : places.filter((p) => p.city === selectedCity);
+  const filteredPlaces =
+    selectedCity === "Todas"
+      ? places
+      : places.filter((p) => p.city.toLowerCase().includes(selectedCity.toLowerCase()));
 
   function openGoogleMaps(url: string) {
-    Linking.openURL(url).catch(() => alert("Não foi possível abrir o Google Maps."));
+    if (url) {
+      Linking.openURL(url).catch((err) => console.error("Erro ao abrir o mapa:", err));
+    }
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <Text style={[styles.header, { color: colors.text, fontSize: 22 * fontScale }]}>
-        Atrativos na Baixada Fluminense 📍
-      </Text>
+  const handleCitySelect = (city: string) => {
+    setSelectedCity(city);
+    if (speak) speak(`Filtrando por ${city}`);
+  };
 
-      {/* Filtro Rápido por Município */}
-      <View style={styles.cityFilters}>
-        {["Todas", "Duque de Caxias", "Nova Iguaçu"].map((city) => (
-          <Pressable
-            key={city}
-            style={[styles.cityChip, { backgroundColor: selectedCity === city ? colors.primary : colors.cardBg }]}
-            onPress={() => setSelectedCity(city)}
+  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#2563EB";
+
+  // HTML com OpenStreetMap via Leaflet para renderização webview gratuita e acessível
+  const mapHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          body, html, #map { height: 100%; margin: 0; padding: 0; background-color: ${theme.backgroundColor}; }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          const map = L.map('map').setView([-22.7856, -43.3117], 11);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+
+          const places = ${JSON.stringify(filteredPlaces)};
+          places.forEach(place => {
+            L.marker([-22.7856, -43.3117]).addTo(map)
+              .bindPopup('<b>' + place.name + '</b><br>' + place.city);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      {/* Cabeçalho */}
+      <View style={[styles.header, { borderBottomColor: theme.borderColor }]}>
+        <Text
+          style={[
+            styles.title,
+            {
+              color: theme.textColor,
+              fontSize: 20 * fontScale,
+              letterSpacing: theme.letterSpacing,
+            },
+          ]}
+        >
+          Explorar Mapa
+        </Text>
+
+        <Pressable
+          style={[
+            styles.toggleButton,
+            {
+              backgroundColor: theme.cardBackgroundColor,
+              borderColor: theme.borderColor,
+            },
+          ]}
+          onPress={() => setShowMap(!showMap)}
+        >
+          <Text
+            style={{
+              color: activeAccentColor,
+              fontSize: 12 * fontScale,
+              fontWeight: "bold",
+            }}
           >
-            <Text style={{ color: selectedCity === city ? "#FFF" : colors.text, fontWeight: "bold" }}>
-              {city}
-            </Text>
-          </Pressable>
-        ))}
+            {showMap ? "📋 Esconder Mapa" : "🗺️ Mostrar Mapa"}
+          </Text>
+        </Pressable>
       </View>
 
-      <FlatList
-        data={filteredPlaces}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <Pressable
-            style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-            onPress={() => onSelectPlace?.(item)}
-          >
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            <View style={{ padding: 14 }}>
-              <Text style={[styles.category, { color: colors.accent, fontSize: 12 * fontScale }]}>
-                {item.category} • {item.city}
-              </Text>
-              <Text style={[styles.title, { color: colors.text, fontSize: 18 * fontScale }]}>
-                {item.name}
-              </Text>
-              <Text style={[styles.address, { color: colors.text, fontSize: 13 * fontScale }]}>
-                📍 {item.address}
-              </Text>
-
-              {/* Bloco de Acessibilidade Específica */}
-              <View style={styles.accessBox}>
-                <Text style={[styles.accessTitle, { fontSize: 13 * fontScale }]}>♿ Recursos de Acessibilidade:</Text>
-                <Text style={[styles.accessText, { fontSize: 12 * fontScale }]}>
-                  🧑‍🦽 Cadeirante: {item.accessibilityDetails?.wheelchair}
-                </Text>
-                <Text style={[styles.accessText, { fontSize: 12 * fontScale }]}>
-                  🦯 Cego / Baixa Visão: {item.accessibilityDetails?.blind}
-                </Text>
-              </View>
-
+      {/* Filtro de Cidades */}
+      <View style={styles.citiesWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {CITIES.map((city) => {
+            const isSelected = selectedCity === city;
+            return (
               <Pressable
-                style={[styles.mapBtn, { backgroundColor: colors.primary }]}
-                onPress={() => openGoogleMaps(item.googleMapsUrl)}
+                key={city}
+                style={[
+                  styles.cityChip,
+                  {
+                    backgroundColor: theme.cardBackgroundColor,
+                    borderColor: isSelected ? activeAccentColor : theme.borderColor,
+                  },
+                ]}
+                onPress={() => handleCitySelect(city)}
               >
-                <Text style={[styles.mapBtnText, { fontSize: 14 * fontScale }]}>
-                  🗺️ Ver Rota Acessível no Google Maps
+                <Text
+                  style={[
+                    styles.cityChipText,
+                    {
+                      fontSize: 12 * fontScale,
+                      letterSpacing: theme.letterSpacing,
+                      color: isSelected ? activeAccentColor : theme.secondaryTextColor,
+                      fontWeight: isSelected ? "bold" : "500",
+                    },
+                  ]}
+                >
+                  {city}
                 </Text>
               </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* WebView do Mapa Interativo */}
+      {showMap && (
+        <View style={[styles.mapContainer, { borderColor: theme.borderColor }]}>
+          <WebView
+            originWhitelist={["*"]}
+            source={{ html: mapHtml }}
+            style={{ flex: 1 }}
+            scrollEnabled={false}
+          />
+        </View>
+      )}
+
+      {/* Lista de Locais */}
+      <FlatList
+        data={filteredPlaces}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: 16 }}
+        renderItem={({ item }) => (
+          <Pressable
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.cardBackgroundColor,
+                borderColor: theme.borderColor,
+                marginBottom: theme.simplifiedLayout ? 16 : 12,
+              },
+            ]}
+            onPress={() => {
+              if (speak) speak(item.name);
+              if (onSelectPlace) onSelectPlace(item);
+            }}
+          >
+            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+
+            <View style={styles.cardInfo}>
+              <Text
+                style={[
+                  styles.cardCategory,
+                  {
+                    fontSize: 10 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                    color: activeAccentColor,
+                  },
+                ]}
+              >
+                {item.category?.toUpperCase() || "TURISMO"}
+              </Text>
+
+              <Text
+                style={[
+                  styles.cardTitle,
+                  {
+                    fontSize: 15 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                    color: theme.textColor,
+                  },
+                ]}
+              >
+                {item.name}
+              </Text>
+
+              <Text
+                style={[
+                  styles.cardCity,
+                  {
+                    fontSize: 12 * fontScale,
+                    letterSpacing: theme.letterSpacing,
+                    color: theme.secondaryTextColor,
+                  },
+                ]}
+              >
+                📍 {item.city}
+              </Text>
+
+              {item.googleMapsUrl && (
+                <Pressable
+                  style={styles.mapsLink}
+                  onPress={() => openGoogleMaps(item.googleMapsUrl)}
+                >
+                  <Text
+                    style={{
+                      color: activeAccentColor,
+                      fontSize: 12 * fontScale,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    🗺️ Abrir no Google Maps
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </Pressable>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingTop: 40 },
-  header: { fontWeight: "bold", marginBottom: 12 },
-  cityFilters: { flexDirection: "row", gap: 8, marginBottom: 16 },
-  cityChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#DDD" },
-  card: { borderRadius: 12, marginBottom: 16, overflow: "hidden", borderWidth: 1 },
-  image: { width: "100%", height: 160 },
-  category: { fontWeight: "bold", textTransform: "uppercase" },
-  title: { fontWeight: "bold", marginTop: 2 },
-  address: { marginTop: 4 },
-  accessBox: { marginTop: 12, backgroundColor: "rgba(0,0,0,0.03)", padding: 10, borderRadius: 8 },
-  accessTitle: { fontWeight: "bold", marginBottom: 4 },
-  accessText: { marginTop: 2, color: "#444" },
-  mapBtn: { marginTop: 12, padding: 12, borderRadius: 8, alignItems: "center" },
-  mapBtnText: { color: "#FFF", fontWeight: "bold" }
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  title: { fontWeight: "bold" },
+  toggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  citiesWrapper: { paddingVertical: 10, paddingLeft: 16 },
+  cityChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  cityChipText: {},
+  mapContainer: {
+    height: 200,
+    marginHorizontal: 16,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  card: {
+    flexDirection: "row",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  cardImage: { width: 80, height: 80, borderRadius: 12, marginRight: 12 },
+  cardInfo: { flex: 1, justifyContent: "center" },
+  cardCategory: { fontWeight: "bold", marginBottom: 2 },
+  cardTitle: { fontWeight: "bold", marginBottom: 4 },
+  cardCity: { marginBottom: 6 },
+  mapsLink: { marginTop: 2 },
 });
