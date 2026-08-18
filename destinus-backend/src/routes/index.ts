@@ -128,6 +128,49 @@ const defaultPlaces = [
       adaptedRestroom: true,
     },
   },
+  // Restaurantes fixos (não dependem da API do Google/Overpass estar disponível)
+  {
+    id: "caxias_rest_1",
+    name: "Restaurante Sabor da Baixada",
+    city: "Duque de Caxias - RJ",
+    category: "Gastronomia",
+    address: "Rua 25 de Agosto, 210 - Centro, Duque de Caxias - RJ",
+    latitude: -22.7867,
+    longitude: -43.3105,
+    lat: -22.7867,
+    lng: -43.3105,
+    rating: 4.5,
+    imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=-22.7867,-43.3105",
+    description: "Culinária regional self-service, especializado em comida caseira.",
+    accessibilityDetails: {
+      wheelchair: "Entrada plana e mesas com espaço para cadeira de rodas",
+      blind: "Cardápio disponível em áudio mediante solicitação",
+      tactilePaving: false,
+      adaptedRestroom: true,
+    },
+  },
+  {
+    id: "caxias_rest_2",
+    name: "Cantina Dona Amélia",
+    city: "Duque de Caxias - RJ",
+    category: "Gastronomia",
+    address: "Av. Presidente Kennedy, 890 - Jardim 25 de Agosto, Duque de Caxias - RJ",
+    latitude: -22.7791,
+    longitude: -43.3049,
+    lat: -22.7791,
+    lng: -43.3049,
+    rating: 4.7,
+    imageUrl: "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=600&q=80",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=-22.7791,-43.3049",
+    description: "Cantina italiana tradicional, ambiente familiar.",
+    accessibilityDetails: {
+      wheelchair: "Rampa de acesso e banheiro adaptado",
+      blind: "Equipe treinada para acompanhamento",
+      tactilePaving: false,
+      adaptedRestroom: true,
+    },
+  },
 ];
 
 const defaultNotifications = [
@@ -165,8 +208,15 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
 
   const data = getDbData();
 
-  if (!data.places || data.places.length === 0) {
-    data.places = defaultPlaces;
+  // Mescla os locais padrão (incluindo restaurantes) com os que já existem no
+  // db.json, em vez de só semear quando a lista está totalmente vazia. Assim,
+  // novos locais adicionados aqui no código (como os restaurantes) sempre
+  // aparecem, mesmo que o db.json já tivesse dados salvos de antes.
+  const existingIds = new Set((data.places || []).map((p: any) => p.id));
+  const missingDefaults = defaultPlaces.filter((p) => !existingIds.has(p.id));
+  if (!data.places) data.places = [];
+  if (missingDefaults.length > 0) {
+    data.places = [...data.places, ...missingDefaults];
     saveDbData(data);
   }
 
@@ -242,6 +292,80 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
     }
   } catch (err) {
     console.log("Erro ao carregar locais via Overpass API:", err);
+  }
+
+  // Integração opcional com a API do Google Places, para trazer ainda mais
+  // locais (incluindo restaurantes) além dos que já vêm do Overpass/OSM.
+  // Para ativar: crie uma chave de API no Google Cloud Console (com a
+  // "Places API" habilitada) e defina a variável de ambiente
+  // GOOGLE_PLACES_API_KEY antes de rodar o servidor, por exemplo:
+  //   GOOGLE_PLACES_API_KEY=sua_chave_aqui npm run dev
+  // Sem a chave configurada, esse bloco é simplesmente ignorado e o app
+  // continua funcionando normalmente só com o Overpass + db.json.
+  const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (googleApiKey) {
+    try {
+      const CAXIAS_LAT = -22.7856;
+      const CAXIAS_LNG = -43.3117;
+      const googleTypes = ["restaurant", "tourist_attraction", "museum", "park", "cafe"];
+
+      const googleResults = await Promise.all(
+        googleTypes.map((type) =>
+          axios
+            .get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", {
+              params: {
+                location: `${CAXIAS_LAT},${CAXIAS_LNG}`,
+                radius: 15000,
+                type,
+                key: googleApiKey,
+              },
+            })
+            .then((r) => ({ type, results: r.data?.results || [] }))
+            .catch(() => ({ type, results: [] }))
+        )
+      );
+
+      const googlePlaces = googleResults.flatMap(({ type, results }) =>
+        results
+          .filter((item: any) => item.name && item.geometry?.location)
+          .map((item: any) => {
+            let mappedCategory = "Comércio Local";
+            if (type === "restaurant" || type === "cafe") mappedCategory = "Gastronomia";
+            else if (type === "museum" || type === "tourist_attraction") mappedCategory = "Cultura & História";
+            else if (type === "park") mappedCategory = "Trilhas & Natureza";
+
+            return {
+              id: `google_${item.place_id}`,
+              name: item.name,
+              city: "Duque de Caxias - RJ",
+              category: mappedCategory,
+              address: item.vicinity || "Duque de Caxias - RJ",
+              latitude: item.geometry.location.lat,
+              longitude: item.geometry.location.lng,
+              lat: item.geometry.location.lat,
+              lng: item.geometry.location.lng,
+              rating: item.rating || 4.5,
+              imageUrl:
+                mappedCategory === "Gastronomia"
+                  ? "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"
+                  : mappedCategory === "Trilhas & Natureza"
+                  ? "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=600"
+                  : "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=600",
+              googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${item.geometry.location.lat},${item.geometry.location.lng}`,
+              accessibilityDetails: {
+                wheelchair: item.wheelchair_accessible_entrance ? "Entrada acessível para cadeira de rodas" : "Não informado pelo Google",
+                blind: "Não informado pelo Google",
+                tactilePaving: false,
+                adaptedRestroom: false,
+              },
+            };
+          })
+      );
+
+      dynamicPlaces = [...dynamicPlaces, ...googlePlaces];
+    } catch (err) {
+      console.log("Erro ao carregar locais via Google Places API:", err);
+    }
   }
 
   const existingNames = new Set(dbPlaces.map((p: any) => p.name?.toLowerCase()));
@@ -323,25 +447,82 @@ routes.get("/experiencias", (req: Request, res: Response): void => {
 });
 
 // 4. Reservas
-routes.get("/reservas", (_req: Request, res: Response): void => {
+// IMPORTANTE: as reservas são filtradas por usuário (userId). Sem isso, toda
+// conta nova enxergava as reservas de TODAS as contas do banco, porque a
+// rota devolvia a lista inteira sem checar quem estava logado.
+routes.get("/reservas", (req: Request, res: Response): void => {
+  const userId = typeof req.query.userId === "string" ? req.query.userId : "";
   const data = getDbData();
-  res.json(data.reservations || []);
+  const all = data.reservations || [];
+
+  if (!userId) {
+    // Sem usuário informado, não devolve reservas de ninguém (evita vazar
+    // dados de outras contas para quem esqueceu de mandar o userId).
+    res.json([]);
+    return;
+  }
+
+  res.json(all.filter((r: any) => String(r.userId) === String(userId)));
 });
 
 routes.post("/reservas", (req: Request, res: Response): void => {
-  const { title, type, date, detail, merchantUrl } = req.body;
+  // Aceita tanto os nomes de campo "novos" (title, category, date...) quanto os
+  // nomes legados que algumas telas antigas do app ainda enviavam (titulo,
+  // id_local, data_horario...), para nunca perder uma reserva por causa de
+  // um nome de campo diferente.
+  const {
+    title,
+    titulo,
+    category,
+    date,
+    time,
+    location,
+    guests,
+    quantidade_pessoas,
+    imageUrl,
+    description,
+    placeId,
+    id_local,
+    data_horario,
+    userId,
+    usuarioId,
+  } = req.body;
+
+  const reservationUserId = userId || usuarioId || null;
+
+  if (!reservationUserId) {
+    res.status(400).json({ message: "userId é obrigatório para criar uma reserva." });
+    return;
+  }
+
+  const reservationTitle = title || titulo || "Reserva Destinus";
   const data = getDbData();
+
+  let reservationDate = date;
+  let reservationTime = time;
+  if (!reservationDate && data_horario) {
+    const parsed = new Date(data_horario);
+    if (!isNaN(parsed.getTime())) {
+      reservationDate = parsed.toLocaleDateString("pt-BR");
+      reservationTime = reservationTime || parsed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    }
+  }
 
   const newReservation = {
     id: `res_${Date.now()}`,
-    type: type || "Passeio",
-    title,
-    date: date || "A confirmar",
-    detail: detail || "Reserva enviada ao parceiro",
-    status: "Confirmado",
-    tab: "Proximas",
-    icon: type === "Voo" ? "✈️" : type === "Hotel" ? "🏨" : "📷",
-    merchantUrl,
+    userId: reservationUserId,
+    placeId: placeId || id_local || null,
+    title: reservationTitle,
+    category: category || "Passeio",
+    date: reservationDate || "A confirmar",
+    time: reservationTime || "",
+    location: location || "",
+    guests: guests || quantidade_pessoas || 1,
+    status: "confirmed",
+    code: `DST-${Math.floor(1000 + Math.random() * 9000)}`,
+    imageUrl: imageUrl || null,
+    description: description || "Reserva enviada ao parceiro.",
+    createdAt: new Date().toISOString(),
   };
 
   data.reservations = data.reservations || [];
@@ -351,7 +532,7 @@ routes.post("/reservas", (req: Request, res: Response): void => {
   data.notifications.unshift({
     id: `notif_${Date.now()}`,
     title: "📅 Reserva Solicitada",
-    message: `Sua solicitação para "${title}" foi enviada com sucesso!`,
+    message: `Sua solicitação para "${reservationTitle}" foi enviada com sucesso!`,
     time: "Agora",
     read: false,
     type: "reservation",
@@ -363,6 +544,26 @@ routes.post("/reservas", (req: Request, res: Response): void => {
     message: "Reserva realizada com sucesso!",
     reservation: newReservation,
   });
+});
+
+// Cancelar uma reserva existente (antes não existia nenhuma rota para isso,
+// então o botão "Cancelar Reserva" no app não tinha como funcionar de verdade).
+routes.put("/reservas/:id/cancelar", (req: Request, res: Response): void => {
+  const { id } = req.params;
+  const data = getDbData();
+
+  data.reservations = data.reservations || [];
+  const reservation = data.reservations.find((r: any) => String(r.id) === String(id));
+
+  if (!reservation) {
+    res.status(404).json({ message: "Reserva não encontrada." });
+    return;
+  }
+
+  reservation.status = "cancelled";
+  saveDbData(data);
+
+  res.json({ message: "Reserva cancelada com sucesso!", reservation });
 });
 
 // 5. Autenticação e Perfil

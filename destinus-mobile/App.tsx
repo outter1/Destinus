@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar } from "react-native";
+import axios from "axios";
 import { COLORS } from "./src/constants/theme";
+import { API_URL } from "./src/config/api";
+import { notify, confirmAsync } from "./src/utils/alert";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -12,6 +15,12 @@ import { AccessibilityOnboardingModal } from "./src/screens/AccessibilityOnboard
 import { AccessibilityProvider, useAccessibility } from "./src/screens/AccessibilityContext";
 import { LibrasAvatar } from "./src/components/LibrasAvatar";
 
+// Sem isso, quando o servidor não responde (ex: IP errado em src/config/api.ts
+// ou servidor caído), o axios ficava esperando indefinidamente e NENHUMA
+// mensagem de sucesso ou erro aparecia na tela — parecia que o botão não
+// fazia nada. Com o timeout, o erro aparece em no máximo 10s.
+axios.defaults.timeout = 10000;
+
 type ScreenType = "login" | "register" | "main";
 type TabType = "home" | "experiences" | "reservations" | "profile";
 
@@ -22,6 +31,7 @@ function NavigationRoot() {
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [showAccessibilityModal, setShowAccessibilityModal] = useState(false);
+  const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
 
   // Consumindo theme e isNeurodivergent do contexto
   const { fontScale, speak, theme, isNeurodivergent } = useAccessibility();
@@ -34,6 +44,41 @@ function NavigationRoot() {
     setSelectedPlace(null);
     setActiveTab(tab);
     speak(`Aba ${label}`);
+  };
+
+  const handleReservePlace = async (place: any) => {
+    try {
+      const response = await axios.post(`${API_URL}/reservas`, {
+        userId: user?.id,
+        placeId: place.id,
+        title: place.name,
+        category: place.category,
+        location: place.address || place.city,
+        imageUrl: place.imageUrl,
+        description: place.description,
+        guests: 1,
+      });
+
+      const codigoReserva = response.data?.reservation?.code || "—";
+      speak(`Reserva confirmada para ${place.name}`);
+      // Força a tela de Reservas a buscar a lista atualizada da API na
+      // próxima vez que for exibida.
+      setReservationsRefreshKey((k) => k + 1);
+
+      const verReservas = await confirmAsync(
+        "Reserva Confirmada! 🎉",
+        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}\n\nVer suas reservas agora?`
+      );
+      if (verReservas) {
+        setSelectedPlace(null);
+        setActiveTab("reservations");
+      }
+    } catch (error) {
+      notify(
+        "Erro ao Reservar",
+        "Não foi possível concluir a reserva agora. Verifique sua conexão com o servidor (veja src/config/api.ts) e tente novamente."
+      );
+    }
   };
 
   const handleSelectPlace = (place: any) => {
@@ -111,6 +156,7 @@ function NavigationRoot() {
           <PlaceDetailScreen
             place={selectedPlace}
             onBack={() => setSelectedPlace(null)}
+            onReserve={handleReservePlace}
           />
         ) : (
           <>
@@ -119,12 +165,19 @@ function NavigationRoot() {
                 user={user}
                 onNavigateTab={(tab: string) => handleTabChange(tab as TabType, tab)}
                 onSelectPlace={handleSelectPlace}
+                onReservationMade={() => setReservationsRefreshKey((k) => k + 1)}
               />
             )}
             {activeTab === "experiences" && (
-              <ExperiencesScreen onSelectPlace={handleSelectPlace} />
+              <ExperiencesScreen
+                user={user}
+                onSelectPlace={handleSelectPlace}
+                onReservationMade={() => setReservationsRefreshKey((k) => k + 1)}
+              />
             )}
-            {activeTab === "reservations" && <ReservationsScreen />}
+            {activeTab === "reservations" && (
+              <ReservationsScreen user={user} refreshKey={reservationsRefreshKey} />
+            )}
             {activeTab === "profile" && (
               <ProfileScreen
                 user={user}

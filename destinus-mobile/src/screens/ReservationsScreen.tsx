@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
+import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
+import { API_URL } from "../config/api";
+import { notify, confirmAsync } from "../utils/alert";
 
 export interface Reservation {
   id: string;
@@ -66,10 +69,50 @@ const DEFAULT_RESERVATIONS: Reservation[] = [
   },
 ];
 
-export function ReservationsScreen() {
+export interface ReservationsScreenProps {
+  // Usuário logado — precisa ser enviado à API para que só as reservas
+  // dessa conta sejam devolvidas (sem isso, o backend não sabia filtrar e
+  // toda conta via as reservas de todo mundo).
+  user?: any;
+  // Incrementar esse valor (de fora) força a tela a buscar a lista mais
+  // recente de reservas na API — usado depois que uma nova reserva é feita
+  // em outra tela (Home, Experiências ou Detalhe do Local).
+  refreshKey?: number;
+}
+
+export function ReservationsScreen({ user, refreshKey }: ReservationsScreenProps) {
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [reservations, setReservations] = useState<Reservation[]>(DEFAULT_RESERVATIONS);
+  const [loading, setLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const loadReservations = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/reservas`, {
+        params: { userId: user.id },
+      });
+      // Agora a API só devolve as reservas dessa conta. Se a conta é nova e
+      // ainda não reservou nada, a lista real é vazia mesmo — não usamos mais
+      // os dados de demonstração aqui para não confundir com reservas reais.
+      setReservations(Array.isArray(response.data) ? response.data : []);
+      setIsOffline(false);
+    } catch (error) {
+      // Servidor indisponível: mantém as reservas de exemplo só para não
+      // mostrar uma tela quebrada, e avisa que está offline.
+      setReservations(DEFAULT_RESERVATIONS);
+      setIsOffline(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadReservations();
+  }, [loadReservations, refreshKey]);
 
   // Amarelo vivo inserido aqui
   const headerBgColor = isNeurodivergent ? theme.cardBackgroundColor : "#FFDD32";
@@ -112,24 +155,34 @@ export function ReservationsScreen() {
     }
   };
 
-  const handleCancelReservation = (id: string, title: string) => {
-    Alert.alert(
+  const handleCancelReservation = async (id: string, title: string) => {
+    const confirmed = await confirmAsync(
       "Cancelar Agendamento",
-      `Deseja realmente cancelar sua reserva para "${title}"?`,
-      [
-        { text: "Manter reserva", style: "cancel" },
-        {
-          text: "Sim, cancelar",
-          style: "destructive",
-          onPress: () => {
-            setReservations((prev) =>
-              prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r))
-            );
-            if (speak) speak(`Agendamento para ${title} foi cancelado.`);
-          },
-        },
-      ]
+      `Deseja realmente cancelar sua reserva para "${title}"?`
     );
+    if (!confirmed) return;
+
+    // Atualiza a tela imediatamente (otimista) para o usuário sentir
+    // resposta na hora, e tenta confirmar no backend em seguida.
+    setCancellingId(id);
+    setReservations((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r))
+    );
+    if (speak) speak(`Agendamento para ${title} foi cancelado.`);
+
+    try {
+      await axios.put(`${API_URL}/reservas/${id}/cancelar`);
+      notify("Reserva Cancelada", `Sua reserva para "${title}" foi cancelada com sucesso.`);
+    } catch (error) {
+      // Reserva de demonstração ou servidor offline: mantém cancelada
+      // localmente mesmo assim, mas avisa que não confirmou no servidor.
+      notify(
+        "Cancelada localmente",
+        "A reserva foi marcada como cancelada aqui, mas não foi possível confirmar com o servidor. Verifique sua conexão."
+      );
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   return (
@@ -164,6 +217,20 @@ export function ReservationsScreen() {
         >
           Minhas Reservas
         </Text>
+        {loading && (
+          <ActivityIndicator style={{ marginTop: 8 }} color={isNeurodivergent ? theme.textColor : "#451A03"} />
+        )}
+        {!loading && isOffline && (
+          <Text
+            style={{
+              marginTop: 8,
+              fontSize: 12 * fontScale,
+              color: isNeurodivergent ? theme.secondaryTextColor : "#7C2D12",
+            }}
+          >
+            ⚠️ Sem conexão com o servidor — mostrando reservas de exemplo.
+          </Text>
+        )}
       </View>
 
       {/* Seleção Simplificada de Abas */}
@@ -423,9 +490,10 @@ export function ReservationsScreen() {
                     <TouchableOpacity
                       accessibilityRole="button"
                       accessibilityLabel={`Cancelar agendamento de ${item.title}`}
+                      disabled={cancellingId === item.id}
                       style={[
                         styles.cancelButton,
-                        { borderColor: isNeurodivergent ? theme.borderColor : "#FCA5A5" },
+                        { borderColor: isNeurodivergent ? theme.borderColor : "#FCA5A5", opacity: cancellingId === item.id ? 0.6 : 1 },
                       ]}
                       onPress={() => handleCancelReservation(item.id, item.title)}
                     >
@@ -439,7 +507,7 @@ export function ReservationsScreen() {
                           },
                         ]}
                       >
-                        Cancelar Reserva
+                        {cancellingId === item.id ? "Cancelando..." : "Cancelar Reserva"}
                       </Text>
                     </TouchableOpacity>
                   </View>

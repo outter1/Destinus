@@ -6,10 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
 import { API_URL } from "../services/api";
 import { useAccessibility } from "./AccessibilityContext";
+import { notify } from "../utils/alert";
 
 interface AddPlaceScreenProps {
   onBack: () => void;
@@ -43,7 +43,7 @@ export function AddPlaceScreen({ onBack }: AddPlaceScreenProps) {
     if (!name.trim() || !address.trim()) {
       const msg = "Preencha o nome e o endereço do local!";
       if (speak) speak(msg);
-      Alert.alert("Atenção", msg);
+      notify("Atenção", msg);
       return;
     }
 
@@ -64,16 +64,17 @@ export function AddPlaceScreen({ onBack }: AddPlaceScreenProps) {
       if (response.ok) {
         const successMsg = "Local cadastrado com sucesso!";
         if (speak) speak(successMsg);
-        Alert.alert("Sucesso", successMsg, [{ text: "OK", onPress: onBack }]);
+        notify("Sucesso", successMsg);
+        onBack();
       } else {
         const errorMsg = "Erro ao cadastrar local.";
         if (speak) speak(errorMsg);
-        Alert.alert("Erro", errorMsg);
+        notify("Erro", errorMsg);
       }
     } catch (error) {
       const connMsg = "Erro ao conectar ao servidor.";
       if (speak) speak(connMsg);
-      Alert.alert("Erro de Conexão", connMsg);
+      notify("Erro de Conexão", connMsg);
     } finally {
       setLoading(false);
     }

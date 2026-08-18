@@ -6,18 +6,13 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  Alert,
   SafeAreaView,
   StatusBar,
-  Platform,
   Image,
 } from "react-native";
 import axios from "axios";
-import { API_URL as CONFIG_API_URL } from "../config/api";
-
-const API_URL =
-  CONFIG_API_URL ||
-  `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:3000`;
+import { API_URL } from "../config/api";
+import { notify } from "../utils/alert";
 
 interface LoginScreenProps {
   onLoginSuccess: (user: any) => void;
@@ -32,7 +27,7 @@ export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginScreenProps
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Campos vazios", "Por favor, digite seu e-mail e senha.");
+      notify("Campos vazios", "Por favor, digite seu e-mail e senha.");
       return;
     }
 
@@ -40,22 +35,33 @@ export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginScreenProps
 
     try {
       const response = await axios.post(`${API_URL}/login`, {
-        email,
+        email: email.trim(),
         password,
       });
 
-      const userData = response.data?.user || {
-        name: email.split("@")[0],
-        email: email,
-      };
+      const userData = response.data?.user;
+      if (!userData) {
+        notify("Erro ao entrar", "O servidor não retornou os dados do usuário. Tente novamente.");
+        return;
+      }
 
+      // IMPORTANTE: só entra no app se o backend realmente confirmar o
+      // login. Antes, qualquer falha (senha errada, e-mail inexistente,
+      // servidor fora do ar) caía aqui e deixava a pessoa entrar mesmo
+      // assim com uma conta "fake" local — por isso dava para "logar" sem
+      // nunca ter se cadastrado.
       onLoginSuccess(userData);
-    } catch (error) {
-      console.log("Entrando em modo offline/local:", error);
-      onLoginSuccess({
-        name: email.split("@")[0] || "Viajante",
-        email: email,
-      });
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        notify("E-mail ou senha inválidos", "Verifique seus dados ou crie uma conta.");
+      } else if (error?.response) {
+        notify("Erro ao entrar", error.response.data?.message || "Não foi possível entrar. Tente novamente.");
+      } else {
+        notify(
+          "Sem conexão com o servidor",
+          "Não foi possível falar com o servidor Destinus. Verifique se o backend está rodando e se o IP em src/config/api.ts está correto."
+        );
+      }
     } finally {
       setLoading(false);
     }

@@ -9,12 +9,11 @@ import {
   Image,
   ImageBackground,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
-
-const API_BASE_URL = "http://192.168.1.100:3000";
+import { API_URL } from "../config/api";
+import { notify } from "../utils/alert";
 
 export interface Place {
   id: string;
@@ -36,6 +35,9 @@ export interface HomeScreenProps {
   user?: any;
   onNavigateTab?: (tab: string) => void;
   onSelectPlace?: (place: Place) => void;
+  // Avisa a tela pai que uma reserva foi concluída aqui, para que a aba
+  // "Reservas" busque a lista atualizada da próxima vez que for aberta.
+  onReservationMade?: () => void;
 }
 
 const DEFAULT_PLACES: Place[] = [
@@ -110,7 +112,7 @@ const CATEGORIES = [
 
 const LANDSCAPE_BANNER_URL = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&q=80";
 
-export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
+export function HomeScreen({ user, onSelectPlace, onReservationMade }: HomeScreenProps) {
   const [places, setPlaces] = useState<Place[]>(DEFAULT_PLACES);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Roteiros");
@@ -121,7 +123,7 @@ export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
 
   const loadPlacesFromApi = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locais`);
+      const response = await axios.get(`${API_URL}/locais`);
       if (response.data && response.data.length > 0) {
         setPlaces(response.data);
       }
@@ -135,28 +137,30 @@ export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
   }, []);
 
   const handleReservar = async (place: Place) => {
-    const codigoReserva = `TAQ-${Math.floor(1000 + Math.random() * 9000)}`;
     try {
       setLoadingId(place.id);
-      await axios.post(`${API_BASE_URL}/reservas`, {
-        id_usuario: user?.id || 1,
-        id_local: place.id,
-        codigo_reserva: codigoReserva,
-        titulo: place.name,
-        data_horario: new Date().toISOString(),
-        quantidade_pessoas: 1,
-        status: "confirmada",
+      const response = await axios.post(`${API_URL}/reservas`, {
+        userId: user?.id,
+        placeId: place.id,
+        title: place.name,
+        category: place.category,
+        location: place.address || place.city,
+        imageUrl: place.imageUrl,
+        description: place.description,
+        guests: 1,
       });
 
+      const codigoReserva = response.data?.reservation?.code || "—";
       if (speak) speak(`Reserva confirmada para ${place.name}`);
-      Alert.alert(
+      if (onReservationMade) onReservationMade();
+      notify(
         "Reserva Confirmada! 🎉",
-        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}`
+        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}\n\nVocê pode acompanhá-la na aba Reservas.`
       );
     } catch (error) {
-      Alert.alert(
-        "Reserva Solicitada",
-        `Reserva gerada localmente com o código ${codigoReserva}.`
+      notify(
+        "Erro ao Reservar",
+        "Não foi possível concluir a reserva agora. Verifique sua conexão com o servidor e tente novamente."
       );
     } finally {
       setLoadingId(null);

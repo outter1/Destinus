@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,16 +8,23 @@ import {
   Switch,
   SafeAreaView,
   Image,
+  ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
+import { API_URL } from "../config/api";
+import { notify } from "../utils/alert";
 
 export interface ProfileScreenProps {
   user?: {
+    id?: string;
     name?: string;
     username?: string;
     email?: string;
     nome?: string;
     avatarUrl?: string;
+    photoUrl?: string;
   };
   onLogout?: () => void;
   recentlyViewed?: any[];
@@ -43,9 +50,55 @@ export function ProfileScreen({
     setLibrasEnabled,
   } = useAccessibility();
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   const userName = user?.name || user?.username || user?.nome || "Usuário Destinus";
   const userEmail = user?.email || "usuario@destinus.com.br";
+  const userPhoto = user?.avatarUrl || user?.photoUrl;
   const activeAccentColor = isNeurodivergent ? theme.accentColor : "#2563EB";
+
+  const handleChangePhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      notify(
+        "Permissão necessária",
+        "Precisamos de acesso às suas fotos para atualizar a imagem de perfil."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType || "image/jpeg";
+    const photoUrl = asset.base64 ? `data:${mimeType};base64,${asset.base64}` : asset.uri;
+
+    // Atualiza a tela na hora (não trava esperando a rede).
+    if (onUpdateUser) onUpdateUser({ ...user, avatarUrl: photoUrl, photoUrl });
+    if (speak) speak("Foto de perfil atualizada");
+
+    // Se o usuário tiver um id "real" (veio de cadastro/login com backend
+    // disponível), também salva a foto no servidor. Se não tiver conexão
+    // ou id, a foto ainda assim já está visível localmente.
+    if (user?.id) {
+      setUploadingPhoto(true);
+      try {
+        await axios.put(`${API_URL}/usuarios/${user.id}/foto`, { photoUrl });
+      } catch (error) {
+        // Sem servidor disponível: a foto continua valendo localmente.
+      } finally {
+        setUploadingPhoto(false);
+      }
+    }
+  };
 
   const handleIncreaseFont = () => {
     const newScale = Math.min(fontScale + 0.1, 1.5);
@@ -101,13 +154,29 @@ export function ProfileScreen({
             },
           ]}
         >
-          {user?.avatarUrl && !theme.hideDecorations ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: activeAccentColor }]}>
-              <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
+          <View style={styles.avatarWrapper}>
+            {userPhoto && !theme.hideDecorations ? (
+              <Image source={{ uri: userPhoto }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: activeAccentColor }]}>
+                <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Alterar foto de perfil"
+              style={[styles.editPhotoButton, { backgroundColor: activeAccentColor, borderColor: theme.cardBackgroundColor }]}
+              onPress={handleChangePhoto}
+              disabled={uploadingPhoto}
+            >
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={{ fontSize: 12 }}>📷</Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.userInfo}>
             <Text
@@ -267,14 +336,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 24,
   },
-  avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 14 },
+  avatar: { width: 56, height: 56, borderRadius: 28 },
+  avatarWrapper: { position: "relative", marginRight: 14 },
+  editPhotoButton: {
+    position: "absolute",
+    bottom: -2,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   avatarPlaceholder: {
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
   },
   avatarInitial: { color: "#FFFFFF", fontSize: 24, fontWeight: "bold" },
   userInfo: { flex: 1 },

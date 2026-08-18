@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
   SafeAreaView,
 } from "react-native";
 import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
-
-const API_BASE_URL = "http://192.168.1.100:3000";
+import { API_URL } from "../config/api";
+import { notify } from "../utils/alert";
 
 export interface Place {
   id: string;
@@ -32,8 +31,12 @@ export interface Place {
 }
 
 export interface ExperiencesScreenProps {
+  user?: any;
   onSelectPlace?: (place: Place) => void;
   navigation?: any;
+  // Avisa a tela pai que uma reserva foi concluída aqui, para que a aba
+  // "Reservas" busque a lista atualizada da próxima vez que for aberta.
+  onReservationMade?: () => void;
 }
 
 const DEFAULT_PLACES: Place[] = [
@@ -90,7 +93,7 @@ const CATEGORIES = [
   { id: "Gastronomia", label: "Gastronomia", icon: "🍽️" },
 ];
 
-export function ExperiencesScreen({ onSelectPlace, navigation }: ExperiencesScreenProps) {
+export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservationMade }: ExperiencesScreenProps) {
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
 
   const [places] = useState<Place[]>(DEFAULT_PLACES);
@@ -101,31 +104,32 @@ export function ExperiencesScreen({ onSelectPlace, navigation }: ExperiencesScre
   const activeAccentColor = isNeurodivergent ? theme.accentColor : "#F97316";
 
   const handleReservar = async (place: Place) => {
-    const codigoReserva = `TAQ-${Math.floor(1000 + Math.random() * 9000)}`;
-
     try {
       setLoadingId(place.id);
 
-      await axios.post(`${API_BASE_URL}/reservas`, {
-        id_usuario: 1,
-        id_local: place.id,
-        codigo_reserva: codigoReserva,
-        titulo: place.name,
-        data_horario: new Date().toISOString(),
-        quantidade_pessoas: 1,
-        status: "confirmada",
+      const response = await axios.post(`${API_URL}/reservas`, {
+        userId: user?.id,
+        placeId: place.id,
+        title: place.name,
+        category: place.category,
+        location: place.address || place.city,
+        imageUrl: place.imageUrl,
+        description: place.description,
+        guests: 1,
       });
 
+      const codigoReserva = response.data?.reservation?.code || "—";
       if (speak) speak(`Reserva confirmada para ${place.name}`);
+      if (onReservationMade) onReservationMade();
 
-      Alert.alert(
+      notify(
         "Reserva Confirmada! 🎉",
-        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}`
+        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}\n\nVocê pode acompanhá-la na aba Reservas.`
       );
     } catch (error) {
-      Alert.alert(
-        "Reserva Solicitada",
-        `Reserva gerada localmente com o código ${codigoReserva}.`
+      notify(
+        "Erro ao Reservar",
+        "Não foi possível concluir a reserva agora. Verifique sua conexão com o servidor e tente novamente."
       );
     } finally {
       setLoadingId(null);
@@ -150,19 +154,27 @@ export function ExperiencesScreen({ onSelectPlace, navigation }: ExperiencesScre
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        {/* Cabeçalho */}
-        <View style={[styles.headerContainer, { backgroundColor: theme.cardBackgroundColor, borderColor: theme.borderColor }]}>
-          <Text
-            style={[
-              styles.headerTitle,
-              {
-                color: theme.textColor,
-                fontSize: 24 * fontScale,
-                letterSpacing: theme.letterSpacing,
-              },
-            ]}
-          >
+  <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+    {/* Cabeçalho */}
+    <View
+      style={[
+        styles.headerContainer,
+        {
+          backgroundColor: isNeurodivergent ? theme.cardBackgroundColor : "#F97316", // A cor laranja do ExperiencesScreen caso queira trocar.
+          borderColor: theme.borderColor,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.headerTitle,
+          {
+            color: isNeurodivergent ? theme.textColor : "#FFFFFF", // Texto branco para contraste com o laranja
+            fontSize: 24 * fontScale,
+            letterSpacing: theme.letterSpacing,
+          },
+        ]}
+      >
             Experiências
           </Text>
 

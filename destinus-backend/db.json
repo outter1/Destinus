@@ -1,102 +1,5 @@
 {
-  "users": [
-    {
-      "id": "1",
-      "name": "Maria Silva",
-      "email": "maria@email.com",
-      "password": "123",
-      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
-      "needs": {
-        "wheelchair": true,
-        "visual": false,
-        "hearing": false,
-        "neurodivergent": false
-      },
-      "disabilities": {
-        "wheelchair": true,
-        "blind": false,
-        "lowVision": false,
-        "deaf": false,
-        "autism": false,
-        "epilepsy": false
-      },
-      "preferences": {
-        "trails": true,
-        "walks": true,
-        "beaches": false,
-        "culture": true,
-        "gastronomy": false
-      }
-    },
-    {
-      "id": "1786026428738",
-      "name": "Gabriel Silva Bastos",
-      "email": "gabrielsilvabastosgbs@gmail.com",
-      "password": "Gabriel2006@eu",
-      "needs": {
-        "wheelchair": false,
-        "visual": false,
-        "hearing": false,
-        "neurodivergent": false
-      }
-    },
-    {
-      "id": "1786034422573",
-      "name": "Reenam",
-      "email": "reenamtoledofonseca@gmail.com",
-      "password": "Reenam",
-      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
-      "needs": {
-        "wheelchair": false,
-        "visual": false,
-        "hearing": true,
-        "neurodivergent": false
-      },
-      "disabilities": {
-        "wheelchair": false,
-        "blind": false,
-        "lowVision": false,
-        "deaf": false,
-        "autism": false,
-        "epilepsy": false
-      },
-      "preferences": {
-        "trails": false,
-        "walks": false,
-        "beaches": false,
-        "culture": false,
-        "gastronomy": false
-      }
-    },
-    {
-      "id": "1786038162025",
-      "name": "Rayssa ",
-      "email": "rayssard2005@gmail.com",
-      "password": "rayssa05",
-      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
-      "needs": {
-        "wheelchair": false,
-        "visual": false,
-        "hearing": false,
-        "neurodivergent": false
-      },
-      "disabilities": {
-        "wheelchair": false,
-        "blind": false,
-        "lowVision": false,
-        "deaf": false,
-        "autism": false,
-        "epilepsy": false
-      },
-      "preferences": {
-        "trails": false,
-        "walks": false,
-        "beaches": false,
-        "culture": false,
-        "gastronomy": false
-      }
-    }
-  ],
+  "users": [],
   "places": [
     {
       "id": "caxias_1",
@@ -257,6 +160,88 @@
         "tactilePaving": true,
         "adaptedRestroom": true
       }
+    },
+    {
+      "id": "caxias_4",
+      "name": "Feira e Polo Gastronômico de Caxias",
+      "city": "Duque de Caxias - RJ",
+      "category": "Gastronomia",
+      "address": "Centro, Duque de Caxias - RJ",
+      "latitude": -22.7856,
+      "longitude": -43.3117,
+      "lat": -22.7856,
+      "lng": -43.3117,
+      "rating": 4.6,
+      "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7856,-43.3117",
+      "accessibilityDetails": {
+        "wheelchair": "Calçadas rebaixadas na região central",
+        "blind": "Sinalização sonora de travessia",
+        "tactilePaving": true,
+        "adaptedRestroom": true
+      }
+    },
+    {
+      "id": "caxias_5",
+      "name": "Igreja Matriz de Santo Antônio",
+      "city": "Duque de Caxias - RJ",
+      "category": "Cultura & História",
+      "address": "Av. Gov. Leonel de Moura Brizola - Centro, Duque de Caxias - RJ",
+      "latitude": -22.7881,
+      "longitude": -43.3082,
+      "lat": -22.7881,
+      "lng": -43.3082,
+      "rating": 4.8,
+      "imageUrl": "https://images.unsplash.com/photo-1548625361-182283e0ef88?auto=format&fit=crop&w=600&q=80",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7881,-43.3082",
+      "accessibilityDetails": {
+        "wheelchair": "Rampa de acesso lateral e nave ampla",
+        "blind": "Audiodescrição e sistema de som adaptado",
+        "tactilePaving": true,
+        "adaptedRestroom": true
+      }
+    },
+    {
+      "id": "caxias_rest_1",
+      "name": "Restaurante Sabor da Baixada",
+      "city": "Duque de Caxias - RJ",
+      "category": "Gastronomia",
+      "address": "Rua 25 de Agosto, 210 - Centro, Duque de Caxias - RJ",
+      "latitude": -22.7867,
+      "longitude": -43.3105,
+      "lat": -22.7867,
+      "lng": -43.3105,
+      "rating": 4.5,
+      "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7867,-43.3105",
+      "description": "Culinária regional self-service, especializado em comida caseira.",
+      "accessibilityDetails": {
+        "wheelchair": "Entrada plana e mesas com espaço para cadeira de rodas",
+        "blind": "Cardápio disponível em áudio mediante solicitação",
+        "tactilePaving": false,
+        "adaptedRestroom": true
+      }
+    },
+    {
+      "id": "caxias_rest_2",
+      "name": "Cantina Dona Amélia",
+      "city": "Duque de Caxias - RJ",
+      "category": "Gastronomia",
+      "address": "Av. Presidente Kennedy, 890 - Jardim 25 de Agosto, Duque de Caxias - RJ",
+      "latitude": -22.7791,
+      "longitude": -43.3049,
+      "lat": -22.7791,
+      "lng": -43.3049,
+      "rating": 4.7,
+      "imageUrl": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=600&q=80",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=-22.7791,-43.3049",
+      "description": "Cantina italiana tradicional, ambiente familiar.",
+      "accessibilityDetails": {
+        "wheelchair": "Rampa de acesso e banheiro adaptado",
+        "blind": "Equipe treinada para acompanhamento",
+        "tactilePaving": false,
+        "adaptedRestroom": true
+      }
     }
   ],
   "experiences": [
@@ -279,17 +264,327 @@
       "accessibilitySummary": "Cardápio em Braille e Acessibilidade Física"
     }
   ],
-  "reservations": [
+  "reservations": [],
+  "notifications": [
     {
-      "id": "res_1",
-      "type": "Passeio",
-      "title": "Voo Duplo Adaptado",
-      "date": "20 de Outubro - 09:00",
-      "detail": "Reserva confirmada. Instrutor certificado em acessibilidade.",
-      "status": "Confirmado",
-      "tab": "Proximas",
-      "icon": "📷",
-      "merchantUrl": "https://whatsapp.com"
+      "id": "notif_1787020222633",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Parque Natural Municipal da Taquara\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787020222455",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Parque Natural Municipal da Taquara\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787020222303",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Parque Natural Municipal da Taquara\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787020221559",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Parque Natural Municipal da Taquara\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019515089",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Centro Cultural Oscar Niemeyer\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019514303",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Centro Cultural Oscar Niemeyer\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019485880",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019485700",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019485486",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019485262",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019483900",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019483678",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019483444",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019483232",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019482775",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019482552",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019482023",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019481853",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019481653",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019481435",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019480534",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Igreja Matriz de Nossa Senhora do Pilar\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019292929",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019292772",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019292593",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019292424",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019292211",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019291664",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019282785",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019280778",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019280631",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019280438",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019280238",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019279869",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019279656",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019279437",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019277988",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1787019272705",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Feira e Polo Gastronômico de Caxias\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
+    {
+      "id": "notif_1",
+      "title": "📍 Recomendação do Dia",
+      "message": "Que tal visitar a Igreja Matriz de Santo Antônio no Centro de Caxias hoje?",
+      "time": "Há 10 min",
+      "read": false,
+      "type": "recommendation"
+    },
+    {
+      "id": "notif_2",
+      "title": "♿ Dica de Acessibilidade",
+      "message": "O Parque Natural da Taquara atualizou suas rampas de acesso às trilhas baixas.",
+      "time": "Há 2 horas",
+      "read": false,
+      "type": "accessibility"
+    },
+    {
+      "id": "notif_3",
+      "title": "🎉 Bem-vindo ao Destinus",
+      "message": "Explore a Baixada Fluminense com rotas acessíveis e personalizadas.",
+      "time": "Ontem",
+      "read": true,
+      "type": "system"
     }
   ]
 }

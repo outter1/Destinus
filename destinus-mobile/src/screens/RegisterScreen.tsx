@@ -6,15 +6,12 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Alert,
   ActivityIndicator,
   SafeAreaView,
-  Platform,
 } from "react-native";
 import axios from "axios";
-import { API_URL as CONFIG_API_URL } from "../config/api";
-
-const API_URL = CONFIG_API_URL || `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:3000`;
+import { API_URL } from "../config/api";
+import { notify } from "../utils/alert";
 
 interface RegisterScreenProps {
   onGoToLogin: () => void;
@@ -57,7 +54,7 @@ export function RegisterScreen({ onGoToLogin, onRegisterSuccess }: RegisterScree
 
   const handleNextStep = () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Campos obrigatórios", "Por favor, preencha nome, e-mail e senha.");
+      notify("Campos obrigatórios", "Por favor, preencha nome, e-mail e senha.");
       return;
     }
     setStep(2);
@@ -84,11 +81,28 @@ export function RegisterScreen({ onGoToLogin, onRegisterSuccess }: RegisterScree
 
     try {
       const response = await axios.post(`${API_URL}/cadastro`, userData);
-      onRegisterSuccess(response.data.user || userData);
-    } catch (error) {
-      console.log("Erro no cadastro (prosseguindo localmente):", error);
-      // Garante a continuidade do fluxo mesmo se o servidor backend não responder
-      onRegisterSuccess(userData);
+      const createdUser = response.data?.user;
+      if (!createdUser) {
+        notify("Erro no cadastro", "O servidor não confirmou o cadastro. Tente novamente.");
+        return;
+      }
+      // Só avança para o app depois que o backend confirma a criação da
+      // conta. Antes, qualquer erro (servidor fora do ar, e-mail duplicado
+      // etc.) caía aqui e deixava a pessoa "cadastrada" localmente mesmo
+      // sem nenhuma conta real ter sido criada no banco.
+      onRegisterSuccess(createdUser);
+    } catch (error: any) {
+      if (error?.response) {
+        notify(
+          "Erro no cadastro",
+          error.response.data?.message || "Não foi possível concluir o cadastro. Tente novamente."
+        );
+      } else {
+        notify(
+          "Sem conexão com o servidor",
+          "Não foi possível falar com o servidor Destinus. Verifique se o backend está rodando e se o IP em src/config/api.ts está correto."
+        );
+      }
     } finally {
       setLoading(false);
     }
