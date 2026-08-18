@@ -62,27 +62,28 @@ Além dos locais cadastrados manualmente (armazenados no `db.json`), o backend e
 
 O projeto é dividido em dois pacotes independentes:
 
+```
 Destinus/
-├── destinus-backend/ # API REST em Node.js + Express + TypeScript
-│ ├── scripts/
-│ │ └── free-port.cjs # Libera a porta 3333 antes de subir o servidor
-│ ├── src/
-│ │ ├── config/ # Configuração de acesso ao "banco de dados"
-│ │ ├── controllers/ # Regras de negócio (locais, autenticação, reviews)
-│ │ ├── routes/ # Definição das rotas da API
-│ │ └── server.ts # Ponto de entrada do servidor
-│ └── db.json # Banco de dados leve (JSON), ideal para prototipagem
+├── destinus-backend/     # API REST em Node.js + Express + TypeScript
+│   ├── scripts/
+│   │   └── free-port.cjs # Libera a porta 3333 antes de subir o servidor
+│   ├── src/
+│   │   ├── config/       # Configuração de acesso ao "banco de dados"
+│   │   ├── controllers/  # Regras de negócio (locais, autenticação, reviews)
+│   │   ├── routes/       # Definição das rotas da API
+│   │   └── server.ts     # Ponto de entrada do servidor
+│   └── db.json           # Banco de dados leve (JSON), ideal para prototipagem
 │
-└── destinus-mobile/ # App mobile em React Native + Expo + TypeScript
-├── assets/ # Logo, banner e imagens estáticas
-└── src/
-├── components/ # Componentes reutilizáveis (ex: LibrasAvatar)
-├── config/ # Configuração de ambiente/API
-├── constants/ # Tema, cores e constantes visuais
-├── screens/ # Telas do app (Home, Explorar, Reservas, Perfil...)
-├── services/ # Camada de comunicação com a API
-└── utils/ # Helpers cross-platform (ex: alert.ts)
-
+└── destinus-mobile/      # App mobile em React Native + Expo + TypeScript
+    ├── assets/           # Logo, banner e imagens estáticas
+    └── src/
+        ├── components/   # Componentes reutilizáveis (ex: LibrasAvatar)
+        ├── config/       # Configuração de ambiente/API
+        ├── constants/    # Tema, cores e constantes visuais
+        ├── screens/      # Telas do app (Home, Explorar, Reservas, Perfil...)
+        ├── services/     # Camada de comunicação com a API
+        └── utils/        # Helpers cross-platform (ex: alert.ts)
+```
 
 ### Stack utilizada
 
