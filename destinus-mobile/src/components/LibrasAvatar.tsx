@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, StyleSheet, Platform, Pressable, Text } from "react-native";
+import { View, StyleSheet, Platform, Pressable, Text, PanResponder, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
 import { useAccessibility } from "../screens/AccessibilityContext";
 
@@ -159,6 +159,80 @@ export function LibrasAvatar() {
   // cobrindo a barra de abas (Perfil, Reservas etc.) sem necessidade.
   const [isOpen, setIsOpen] = useState(false);
 
+  // Troca o "key" da WebView/iframe força ela a ser recriada do zero pelo
+  // React, sempre num estado limpo e fechado. Isso resolve o botão "X" de
+  // vez: antes ele tentava convencer o player do VLibras (código de
+  // terceiro, fora do nosso controle) a se fechar sozinho — e às vezes o
+  // próprio VLibras "reabria" a classe/estado internamente logo em seguida,
+  // fazendo o "X" parecer que não funcionou. Recriando o componente do
+  // zero, não existe mais nenhum estado interno do VLibras para "voltar" —
+  // é garantido que ele nasce fechado.
+  const [instanceKey, setInstanceKey] = useState(0);
+
+  // Posição do widget na tela. Começa no canto inferior direito (mesmo
+  // lugar de antes), mas agora pode ser arrastado livremente pelo usuário
+  // segurando a alcinha (⠿) no canto do botão.
+  const [position, setPosition] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { x: width - WIDGET_SIZE - 12, y: height - WIDGET_SIZE - 90 };
+  });
+  const dragStartPosition = useRef(position);
+  const wasDragged = useRef(false);
+  const prevIsOpen = useRef(isOpen);
+
+  // Quando o player abre/fecha, o tamanho da caixa muda (botão pequeno
+  // 70x70 <-> painel grande 320x480). Sem isso, a caixa crescia mantendo
+  // fixo o canto SUPERIOR-ESQUERDO, então ela "nascia" longe de onde o
+  // botão (e a alcinha de arrastar) realmente estavam na tela. Aqui,
+  // sempre que abre/fecha, recalculamos a posição para manter o mesmo
+  // canto inferior-direito fixo — ou seja, o painel cresce/encolhe a
+  // partir exatamente de onde o botão estava, então tudo (WebView, alça de
+  // arrastar e botão de fechar) fica sempre visualmente junto.
+  useEffect(() => {
+    if (prevIsOpen.current === isOpen) return;
+    prevIsOpen.current = isOpen;
+    setPosition((prev) => {
+      const { width, height } = Dimensions.get("window");
+      const fromSize = isOpen ? WIDGET_SIZE : OPEN_WIDTH;
+      const fromHeight = isOpen ? WIDGET_SIZE : OPEN_HEIGHT;
+      const toSize = isOpen ? OPEN_WIDTH : WIDGET_SIZE;
+      const toHeight = isOpen ? OPEN_HEIGHT : WIDGET_SIZE;
+      const anchorRight = prev.x + fromSize;
+      const anchorBottom = prev.y + fromHeight;
+      return {
+        x: Math.max(0, Math.min(anchorRight - toSize, width - toSize)),
+        y: Math.max(0, Math.min(anchorBottom - toHeight, height - toHeight)),
+      };
+    });
+  }, [isOpen]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
+      },
+      onPanResponderGrant: () => {
+        dragStartPosition.current = position;
+        wasDragged.current = false;
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        wasDragged.current = true;
+        const { width, height } = Dimensions.get("window");
+        const size = isOpen ? OPEN_WIDTH : WIDGET_SIZE;
+        const openHeight = isOpen ? OPEN_HEIGHT : WIDGET_SIZE;
+        const nextX = dragStartPosition.current.x + gestureState.dx;
+        const nextY = dragStartPosition.current.y + gestureState.dy;
+        setPosition({
+          // Mantém o widget sempre visível, sem deixar arrastar para fora
+          // da tela.
+          x: Math.max(0, Math.min(nextX, width - size)),
+          y: Math.max(0, Math.min(nextY, height - openHeight)),
+        });
+      },
+    })
+  ).current;
+
   useEffect(() => {
     if (textToTranslate && librasEnabled) {
       if (Platform.OS === "web") {
@@ -190,14 +264,15 @@ export function LibrasAvatar() {
   // mesmo em caso de bug no widget de terceiros.
   const handleForceClose = () => {
     setIsOpen(false);
-    if (Platform.OS === "web") {
-      iframeRef.current?.contentWindow?.postMessage("__force_close__", "*");
-    } else {
-      webViewRef.current?.postMessage("__force_close__");
-    }
+    // Recria a WebView/iframe do zero — garante o fechamento mesmo que o
+    // player do VLibras não responda à mensagem abaixo.
+    setInstanceKey((k) => k + 1);
   };
 
   if (!librasEnabled) return null;
+
+  const widgetSize = isOpen ? OPEN_WIDTH : WIDGET_SIZE;
+  const widgetHeight = isOpen ? OPEN_HEIGHT : WIDGET_SIZE;
 
   return (
     // Fragment (não uma View única): o botão de fechar fica como um IRMÃO
@@ -209,14 +284,18 @@ export function LibrasAvatar() {
     // desenhado por cima visualmente, mas o toque continuava sendo
     // capturado pela WebView por baixo. Sendo irmão (fora do container da
     // WebView), o botão passa a ser sua própria camada nativa e recebe o
-    // toque de verdade.
+    // toque de verdade. A mesma lógica vale para a alcinha de arrastar.
     <>
       <View
-        style={[styles.widgetContainer, isOpen && styles.widgetContainerOpen]}
+        style={[
+          styles.widgetContainer,
+          { left: position.x, top: position.y, width: widgetSize, height: widgetHeight },
+        ]}
         pointerEvents="box-none"
       >
         {Platform.OS === "web" ? (
           <iframe
+            key={instanceKey}
             ref={iframeRef}
             srcDoc={VLIBRAS_HTML}
             style={{
@@ -228,6 +307,7 @@ export function LibrasAvatar() {
           />
         ) : (
           <WebView
+            key={instanceKey}
             ref={webViewRef}
             originWhitelist={["*"]}
             source={{ html: VLIBRAS_HTML }}
@@ -240,12 +320,27 @@ export function LibrasAvatar() {
         )}
       </View>
 
+      {/* Alcinha para arrastar o widget pela tela. Fica só no canto
+          superior-esquerdo do botão, fora da área da WebView, para o toque
+          não ser "roubado" por ela (mesmo motivo do botão de fechar acima). */}
+      <View
+        {...panResponder.panHandlers}
+        accessibilityRole="button"
+        accessibilityLabel="Arrastar intérprete de Libras para outra posição"
+        style={[styles.dragHandle, { left: position.x - 4, top: position.y - 4 }]}
+      >
+        <Text style={styles.dragHandleText}>⠿</Text>
+      </View>
+
       {isOpen && (
         <Pressable
           onPress={handleForceClose}
           accessibilityRole="button"
           accessibilityLabel="Fechar intérprete de Libras"
-          style={styles.closeButton}
+          style={[
+            styles.closeButton,
+            { left: position.x + widgetSize - 32 - 6, top: position.y + 6 },
+          ]}
           hitSlop={12}
         >
           <Text style={styles.closeButtonText}>✕</Text>
@@ -255,45 +350,47 @@ export function LibrasAvatar() {
   );
 }
 
+const WIDGET_SIZE = 70;
+const OPEN_WIDTH = 320;
+const OPEN_HEIGHT = 480;
+
 const styles = StyleSheet.create({
-  // Estado padrão: só o botão flutuante do VLibras, pequeno e posicionado
-  // ACIMA da barra de abas (bottom: 90) para nunca tampar "Perfil"/"Reservas".
+  // Posição agora é controlada dinamicamente (left/top) via estado
+  // "position", para permitir arrastar o widget pela tela.
   widgetContainer: {
     position: "absolute",
-    bottom: 90,
-    right: 12,
-    width: 70,
-    height: 70,
     zIndex: 999999,
     backgroundColor: "transparent",
-  },
-  // Estado aberto (usuário tocou no botão e o player de Libras está em uso):
-  // expande para dar espaço de verdade ao vídeo/intérprete, mas o "bottom"
-  // continua o MESMO do estado fechado (acima da barra de abas), só que
-  // com altura suficiente para o personagem inteiro (cabeça incluída)
-  // aparecer sem cortar. Antes isso ficava em bottom:12 (quase colado no
-  // rodapé) e a WebView acabava tampando a barra de abas mesmo com espaço
-  // "vazio" visualmente; mantendo o mesmo bottom do estado fechado, a área
-  // tocável nunca alcança a barra de abas, aberto ou fechado.
-  widgetContainerOpen: {
-    bottom: 90,
-    width: 320,
-    height: 480,
   },
   webview: {
     flex: 1,
     backgroundColor: "transparent",
   },
+  // Alcinha de arrastar: um pequeno círculo no canto superior-esquerdo do
+  // botão, sempre visível (aberto ou fechado), como sua própria camada
+  // nativa (irmã da WebView) para garantir que o toque seja capturado.
+  dragHandle: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000001,
+    elevation: 1000001,
+  },
+  dragHandleText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
+    transform: [{ rotate: "90deg" }],
+  },
   // Botão nativo de emergência para fechar o player. Agora é IRMÃO da
-  // caixa da WebView (não filho dela) — por isso as coordenadas são
-  // calculadas para cair exatamente no canto superior direito da caixa
-  // aberta (widgetContainerOpen: bottom 90, right 12, largura 320, altura
-  // 480), em vez de usar "top/right" relativos a um container pai que ele
-  // não tem mais.
+  // caixa da WebView (não filho dela), posicionado relativo à posição
+  // atual (arrastável) do widget, sempre no canto superior-direito dele.
   closeButton: {
     position: "absolute",
-    bottom: 90 + 480 - 32 - 6, // = 532: perto do topo da caixa aberta
-    right: 12 + 6, // = 18: perto da borda direita da caixa aberta
     width: 32,
     height: 32,
     borderRadius: 16,

@@ -1,5 +1,34 @@
 {
-  "users": [],
+  "users": [
+    {
+      "id": "1787051006427",
+      "name": "Gabriel Silva Bastos",
+      "email": "gabrielsilvabastosgbs@gmail.com",
+      "password": "Gabriel2006@eu",
+      "photoUrl": "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
+      "needs": {
+        "wheelchair": true,
+        "visual": false,
+        "hearing": true,
+        "neurodivergent": false
+      },
+      "disabilities": {
+        "wheelchair": false,
+        "blind": false,
+        "lowVision": false,
+        "deaf": false,
+        "autism": false,
+        "epilepsy": false
+      },
+      "preferences": {
+        "trails": false,
+        "walks": false,
+        "culture": false,
+        "beaches": false,
+        "gastronomy": false
+      }
+    }
+  ],
   "places": [
     {
       "id": "caxias_1",
@@ -264,8 +293,33 @@
       "accessibilitySummary": "Cardápio em Braille e Acessibilidade Física"
     }
   ],
-  "reservations": [],
+  "reservations": [
+    {
+      "id": "res_1787051073048",
+      "userId": "1787051006427",
+      "placeId": "caxias_2",
+      "title": "Museu Vivo do São Bento",
+      "category": "Cultura & História",
+      "date": "A confirmar",
+      "time": "",
+      "location": "Rua Benjamin da Rocha Júnior, s/n - São Bento, Duque de Caxias - RJ",
+      "guests": 1,
+      "status": "confirmed",
+      "code": "DST-6725",
+      "imageUrl": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=600",
+      "description": "Ecomuseu comunitário dedicado à memória e patrimônio regional.",
+      "createdAt": "2026-08-18T11:04:33.048Z"
+    }
+  ],
   "notifications": [
+    {
+      "id": "notif_1787051073048",
+      "title": "📅 Reserva Solicitada",
+      "message": "Sua solicitação para \"Museu Vivo do São Bento\" foi enviada com sucesso!",
+      "time": "Agora",
+      "read": false,
+      "type": "reservation"
+    },
     {
       "id": "notif_1787020222633",
       "title": "📅 Reserva Solicitada",
