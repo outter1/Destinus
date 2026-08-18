@@ -71,8 +71,9 @@ export function ReservationsScreen() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [reservations, setReservations] = useState<Reservation[]>(DEFAULT_RESERVATIONS);
 
-  const headerBgColor = isNeurodivergent ? theme.cardBackgroundColor : "#CA8A04";
-  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#CA8A04";
+  // Amarelo vivo inserido aqui
+  const headerBgColor = isNeurodivergent ? theme.cardBackgroundColor : "#FFDD32";
+  const activeAccentColor = isNeurodivergent ? theme.accentColor : "#FFDD32";
 
   // Filtro simples entre "Próximas" e "Histórico"
   const filteredReservations = useMemo(() => {
@@ -142,7 +143,7 @@ export function ReservationsScreen() {
           style={[
             styles.headerSubtitle,
             {
-              color: isNeurodivergent ? theme.secondaryTextColor : "#FEF08A",
+              color: isNeurodivergent ? theme.secondaryTextColor : "#451A03", // Texto escuro para contraste
               fontSize: 14 * fontScale,
               letterSpacing: theme.letterSpacing,
             },
@@ -154,7 +155,7 @@ export function ReservationsScreen() {
           style={[
             styles.headerTitle,
             {
-              color: isNeurodivergent ? theme.textColor : "#FFFFFF",
+              color: isNeurodivergent ? theme.textColor : "#000000", // Texto preto para contraste no amarelo
               fontSize: 24 * fontScale,
               letterSpacing: theme.letterSpacing,
               lineHeight: 28 * fontScale * theme.lineHeightMultiplier,
@@ -187,7 +188,7 @@ export function ReservationsScreen() {
             style={[
               styles.tabText,
               {
-                color: activeTab === "upcoming" ? "#FFFFFF" : theme.textColor,
+                color: activeTab === "upcoming" ? "#000000" : theme.textColor, // Texto escuro na aba ativa
                 fontSize: 14 * fontScale,
                 letterSpacing: theme.letterSpacing,
               },
@@ -217,7 +218,7 @@ export function ReservationsScreen() {
             style={[
               styles.tabText,
               {
-                color: activeTab === "past" ? "#FFFFFF" : theme.textColor,
+                color: activeTab === "past" ? "#000000" : theme.textColor, // Texto escuro na aba ativa
                 fontSize: 14 * fontScale,
                 letterSpacing: theme.letterSpacing,
               },
@@ -286,7 +287,7 @@ export function ReservationsScreen() {
                       style={[
                         styles.cardCategory,
                         {
-                          color: activeAccentColor,
+                          color: isNeurodivergent ? theme.textColor : "#B45309",
                           fontSize: 11 * fontScale,
                           letterSpacing: theme.letterSpacing,
                         },
@@ -380,7 +381,7 @@ export function ReservationsScreen() {
                   </View>
                 </View>
 
-                {/* Código de Comprovante em Destaque Simplificado */}
+                {/* Código de Comprovante */}
                 <View
                   style={[
                     styles.codeBox,

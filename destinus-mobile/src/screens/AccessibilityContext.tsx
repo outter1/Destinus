@@ -38,26 +38,28 @@ interface AccessibilityContextType {
   stopSpeaking: () => void;
 }
 
+// Tema Claro Padrão (utilizado por "none", "low_vision", "blind" e "libras")
 const standardTheme: AccessibilityTheme = {
-  backgroundColor: "#0F172A",
-  cardBackgroundColor: "#1E293B",
-  textColor: "#FFFFFF",
-  secondaryTextColor: "#94A3B8",
+  backgroundColor: "#F4F7FC",
+  cardBackgroundColor: "#FFFFFF",
+  textColor: "#0F172A",
+  secondaryTextColor: "#64748B",
   accentColor: "#10B981",
-  borderColor: "#334155",
+  borderColor: "#E2E8F0",
   letterSpacing: 0,
   lineHeightMultiplier: 1.2,
   hideDecorations: false,
   simplifiedLayout: false,
 };
 
+// Tema Escuro / Suave (exclusivo para "neurodivergent")
 const neurodivergentTheme: AccessibilityTheme = {
-  backgroundColor: "#1A1D24",
-  cardBackgroundColor: "#252932",
-  textColor: "#E2E8F0",
-  secondaryTextColor: "#CBD5E1",
+  backgroundColor: "#0F172A",
+  cardBackgroundColor: "#1E293B",
+  textColor: "#F8FAFC",
+  secondaryTextColor: "#94A3B8",
   accentColor: "#6EE7B7",
-  borderColor: "#475569",
+  borderColor: "#334155",
   letterSpacing: 1.2,
   lineHeightMultiplier: 1.6,
   hideDecorations: true,

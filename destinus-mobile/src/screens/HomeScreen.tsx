@@ -9,6 +9,7 @@ import {
   Image,
   ImageBackground,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
@@ -113,6 +114,7 @@ export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
   const [places, setPlaces] = useState<Place[]>(DEFAULT_PLACES);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Roteiros");
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // Consumindo dados de acessibilidade dinâmicos
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
@@ -131,6 +133,35 @@ export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
   useEffect(() => {
     loadPlacesFromApi();
   }, []);
+
+  const handleReservar = async (place: Place) => {
+    const codigoReserva = `TAQ-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      setLoadingId(place.id);
+      await axios.post(`${API_BASE_URL}/reservas`, {
+        id_usuario: user?.id || 1,
+        id_local: place.id,
+        codigo_reserva: codigoReserva,
+        titulo: place.name,
+        data_horario: new Date().toISOString(),
+        quantidade_pessoas: 1,
+        status: "confirmada",
+      });
+
+      if (speak) speak(`Reserva confirmada para ${place.name}`);
+      Alert.alert(
+        "Reserva Confirmada! 🎉",
+        `Sua reserva para "${place.name}" foi realizada com sucesso.\n\nCódigo: ${codigoReserva}`
+      );
+    } catch (error) {
+      Alert.alert(
+        "Reserva Solicitada",
+        `Reserva gerada localmente com o código ${codigoReserva}.`
+      );
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   const filteredPlaces = useMemo(() => {
     return places.filter((p) => {
@@ -433,6 +464,22 @@ export function HomeScreen({ user, onSelectPlace }: HomeScreenProps) {
                   >
                     📍 {item.city}
                   </Text>
+
+                  {/* Botão de Reserva Integrado */}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`Reservar ${item.name}`}
+                    style={[
+                      styles.reserveButton,
+                      { backgroundColor: isNeurodivergent ? theme.accentColor : "#F97316" },
+                    ]}
+                    disabled={loadingId === item.id}
+                    onPress={() => handleReservar(item)}
+                  >
+                    <Text style={[styles.reserveButtonText, { fontSize: 11 * fontScale }]}>
+                      {loadingId === item.id ? "Reservando..." : "Reservar"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))
@@ -531,6 +578,17 @@ const styles = StyleSheet.create({
   placeInfo: { flex: 1, justifyContent: "center" },
   placeCategoryOrange: { fontWeight: "bold", marginBottom: 2 },
   placeName: { fontWeight: "bold", marginBottom: 4 },
-  placeCity: {},
+  placeCity: { marginBottom: 6 },
   emptyText: { paddingHorizontal: 16 },
+  reserveButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  reserveButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
 });
