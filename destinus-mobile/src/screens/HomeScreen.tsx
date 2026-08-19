@@ -184,6 +184,15 @@ export function HomeScreen({ user, onSelectPlace, onReservationMade }: HomeScree
     });
   }, [places, selectedCategory, searchQuery]);
 
+  // "Destinos em alta" = os locais com a maior média (rating) entre os que
+  // batem com o filtro/busca atual, e não simplesmente os 3 primeiros da
+  // lista como estava antes.
+  const highRatedPlaces = useMemo(() => {
+    return [...filteredPlaces]
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 6);
+  }, [filteredPlaces]);
+
   const handleSelectPlace = (place: Place) => {
     if (speak) speak(`Selecionado ${place.name}`);
     if (onSelectPlace) onSelectPlace(place);
@@ -335,7 +344,7 @@ export function HomeScreen({ user, onSelectPlace, onReservationMade }: HomeScree
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 16 }}>
-          {filteredPlaces.slice(0, 3).map((item) => (
+          {highRatedPlaces.map((item) => (
             <TouchableOpacity
               key={`high_${item.id}`}
               style={[
@@ -349,6 +358,11 @@ export function HomeScreen({ user, onSelectPlace, onReservationMade }: HomeScree
               onPress={() => handleSelectPlace(item)}
             >
               <Image source={{ uri: item.imageUrl }} style={styles.highCardImage} />
+              {typeof item.rating === "number" && item.rating > 0 && (
+                <View style={styles.ratingBadge}>
+                  <Text style={styles.ratingBadgeText}>⭐ {item.rating.toFixed(1)}</Text>
+                </View>
+              )}
               <View
                 style={[
                   styles.highCardOverlay,
@@ -468,6 +482,20 @@ export function HomeScreen({ user, onSelectPlace, onReservationMade }: HomeScree
                   >
                     📍 {item.city}
                   </Text>
+                  {typeof item.rating === "number" && item.rating > 0 && (
+                    <Text
+                      style={[
+                        styles.placeRating,
+                        {
+                          fontSize: 12 * fontScale,
+                          letterSpacing: theme.letterSpacing,
+                          color: theme.textColor,
+                        },
+                      ]}
+                    >
+                      ⭐ {item.rating.toFixed(1)}
+                    </Text>
+                  )}
 
                   {/* Botão de Reserva Integrado */}
                   <TouchableOpacity
@@ -562,6 +590,20 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   highCardImage: { width: "100%", height: "100%" },
+  ratingBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ratingBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
   highCardOverlay: {
     position: "absolute",
     bottom: 0,
@@ -583,6 +625,7 @@ const styles = StyleSheet.create({
   placeCategoryOrange: { fontWeight: "bold", marginBottom: 2 },
   placeName: { fontWeight: "bold", marginBottom: 4 },
   placeCity: { marginBottom: 6 },
+  placeRating: { fontWeight: "600", marginBottom: 6 },
   emptyText: { paddingHorizontal: 16 },
   reserveButton: {
     paddingVertical: 6,

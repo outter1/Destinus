@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -96,12 +96,31 @@ const CATEGORIES = [
 export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservationMade }: ExperiencesScreenProps) {
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
 
-  const [places] = useState<Place[]>(DEFAULT_PLACES);
+  const [places, setPlaces] = useState<Place[]>(DEFAULT_PLACES);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const activeAccentColor = isNeurodivergent ? theme.accentColor : "#F97316";
+
+  // Busca os mesmos estabelecimentos que alimentam a Home (db.json +
+  // Overpass + Google Places), em vez de mostrar sempre a lista fixa de
+  // exemplo. Assim, qualquer local novo cadastrado ou trazido pela
+  // integração com o Google também aparece aqui em Experiências.
+  const loadPlacesFromApi = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/locais`);
+      if (response.data && response.data.length > 0) {
+        setPlaces(response.data);
+      }
+    } catch {
+      // Mantém os DEFAULT_PLACES offline
+    }
+  };
+
+  useEffect(() => {
+    loadPlacesFromApi();
+  }, []);
 
   const handleReservar = async (place: Place) => {
     try {
@@ -151,6 +170,14 @@ export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservati
       return matchesCategory && matchesSearch;
     });
   }, [places, selectedCategory, searchQuery]);
+
+  // Mesmo conceito de "em alta" usado na Home: os estabelecimentos com
+  // maior média entre os que batem com o filtro/busca atual.
+  const highRatedPlaces = useMemo(() => {
+    return [...filteredPlaces]
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 6);
+  }, [filteredPlaces]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -242,7 +269,73 @@ export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservati
           </ScrollView>
         </View>
 
+        {/* Seção Em Alta */}
+        <View style={styles.sectionHeader}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.textColor,
+                fontSize: 16 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            Em alta
+          </Text>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 16 }}>
+          {highRatedPlaces.map((item) => (
+            <TouchableOpacity
+              key={`high_${item.id}`}
+              style={[
+                styles.highCard,
+                { backgroundColor: theme.cardBackgroundColor, borderColor: theme.borderColor, borderWidth: 1 },
+              ]}
+              onPress={() => {
+                if (speak) speak(item.name);
+                if (onSelectPlace) onSelectPlace(item);
+              }}
+            >
+              <Image source={{ uri: item.imageUrl }} style={styles.highCardImage} />
+              {typeof item.rating === "number" && item.rating > 0 && (
+                <View style={styles.ratingBadge}>
+                  <Text style={styles.ratingBadgeText}>⭐ {item.rating.toFixed(1)}</Text>
+                </View>
+              )}
+              <View
+                style={[
+                  styles.highCardOverlay,
+                  { backgroundColor: isNeurodivergent ? theme.cardBackgroundColor : "rgba(15, 23, 42, 0.85)" },
+                ]}
+              >
+                <Text style={[styles.highCardTitle, { fontSize: 11 * fontScale, color: theme.textColor }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={[styles.highCardCity, { fontSize: 9 * fontScale, color: theme.secondaryTextColor }]}>
+                  📍 {item.city}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {/* Lista de Experiências */}
+        <View style={[styles.sectionHeader, { marginBottom: 0 }]}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.textColor,
+                fontSize: 16 * fontScale,
+                letterSpacing: theme.letterSpacing,
+              },
+            ]}
+          >
+            Todos os estabelecimentos
+          </Text>
+        </View>
         <View style={styles.verticalList}>
           {filteredPlaces.length === 0 ? (
             <Text
@@ -307,6 +400,19 @@ export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservati
                   >
                     📍 {item.city}
                   </Text>
+                  {typeof item.rating === "number" && item.rating > 0 && (
+                    <Text
+                      style={[
+                        styles.placeRating,
+                        {
+                          color: theme.textColor,
+                          fontSize: 11 * fontScale,
+                        },
+                      ]}
+                    >
+                      ⭐ {item.rating.toFixed(1)}
+                    </Text>
+                  )}
 
                   {/* Botão Reservar */}
                   <TouchableOpacity
@@ -362,6 +468,46 @@ const styles = StyleSheet.create({
   },
   categoryIcon: { fontSize: 24, marginBottom: 4 },
   categoryLabel: { fontWeight: "600" },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  sectionTitle: { fontWeight: "bold" },
+  highCard: {
+    width: 140,
+    height: 100,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginRight: 12,
+  },
+  highCardImage: { width: "100%", height: "100%" },
+  ratingBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ratingBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  highCardOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 6,
+  },
+  highCardTitle: { fontWeight: "bold" },
+  highCardCity: {},
   verticalList: { paddingHorizontal: 16, marginTop: 16 },
   placeCard: {
     flexDirection: "row",
@@ -376,6 +522,7 @@ const styles = StyleSheet.create({
   placeCategory: { fontWeight: "bold", marginBottom: 2 },
   placeName: { fontWeight: "bold", marginBottom: 4 },
   placeCity: { marginBottom: 6 },
+  placeRating: { fontWeight: "600", marginBottom: 6 },
   emptyText: { paddingHorizontal: 16 },
   reserveButton: {
     paddingVertical: 6,

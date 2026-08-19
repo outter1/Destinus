@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import routes from "./routes";
@@ -12,11 +15,18 @@ app.use(express.json());
 app.use("/api", routes);
 app.use("/", routes);
 
-const PORT = 3333;
+// Usa a porta definida no .env (PORT=...) e cai para 3333 se não houver nada
+// configurado, para não quebrar quem já estava rodando sem .env.
+const PORT = Number(process.env.PORT) || 3333;
 
 const server = app.listen(PORT, () => {
   console.log(`Servidor Destinus rodando com sucesso na porta ${PORT} 🚀`);
   console.log(`Acesse: http://localhost:${PORT}/api/destinos`);
+  if (process.env.GOOGLE_API_KEY || process.env.GOOGLE_PLACES_API_KEY) {
+    console.log("✅ Integração com o Google Places API está ATIVA (chave encontrada no .env).");
+  } else {
+    console.log("⚠️  Nenhuma chave do Google Places encontrada no .env — usando apenas Overpass/db.json.");
+  }
 });
 
 // Encerramento explícito do servidor quando o terminal/processo recebe um

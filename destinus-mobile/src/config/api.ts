@@ -12,7 +12,7 @@ import { Platform } from "react-native";
 //   "ifconfig / ip a" (Mac/Linux). O celular e o computador precisam estar
 //   na MESMA rede Wi-Fi.
 const LOCAL_NETWORK_IP = "192.168.0.168"; // <-- troque pelo IP da sua máquina
-const PORT = 3333;
+const PORT = 3000; // precisa bater com a PORT definida no .env do backend
 
 const getHost = () => {
   if (Platform.OS === "android") return "10.0.2.2";

@@ -302,7 +302,10 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
   //   GOOGLE_PLACES_API_KEY=sua_chave_aqui npm run dev
   // Sem a chave configurada, esse bloco é simplesmente ignorado e o app
   // continua funcionando normalmente só com o Overpass + db.json.
-  const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+  // Aceita tanto GOOGLE_API_KEY (nome usado no .env do projeto) quanto
+  // GOOGLE_PLACES_API_KEY (nome antigo), para não depender de uma única
+  // variável específica.
+  const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_PLACES_API_KEY;
   if (googleApiKey) {
     try {
       const CAXIAS_LAT = -22.7856;
@@ -334,6 +337,22 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
             else if (type === "museum" || type === "tourist_attraction") mappedCategory = "Cultura & História";
             else if (type === "park") mappedCategory = "Trilhas & Natureza";
 
+            // Foto real do local via Google Places Photos, quando disponível.
+            // O Nearby Search devolve só uma "photo_reference" (não a imagem
+            // em si); a imagem de verdade é buscada depois no endpoint
+            // /place/photo, passando essa referência + a chave da API.
+            const photoReference = item.photos?.[0]?.photo_reference;
+            const googlePhotoUrl = photoReference
+              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoReference}&key=${googleApiKey}`
+              : null;
+
+            const fallbackImageUrl =
+              mappedCategory === "Gastronomia"
+                ? "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"
+                : mappedCategory === "Trilhas & Natureza"
+                ? "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=600"
+                : "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=600";
+
             return {
               id: `google_${item.place_id}`,
               name: item.name,
@@ -345,12 +364,9 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
               lat: item.geometry.location.lat,
               lng: item.geometry.location.lng,
               rating: item.rating || 4.5,
-              imageUrl:
-                mappedCategory === "Gastronomia"
-                  ? "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"
-                  : mappedCategory === "Trilhas & Natureza"
-                  ? "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=600"
-                  : "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=600",
+              // Usa a foto real do Google quando o local tem uma cadastrada;
+              // se não tiver, cai para a imagem padrão por categoria.
+              imageUrl: googlePhotoUrl || fallbackImageUrl,
               googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${item.geometry.location.lat},${item.geometry.location.lng}`,
               accessibilityDetails: {
                 wheelchair: item.wheelchair_accessible_entrance ? "Entrada acessível para cadeira de rodas" : "Não informado pelo Google",
