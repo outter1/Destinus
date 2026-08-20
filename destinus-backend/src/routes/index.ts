@@ -225,7 +225,7 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
 
   try {
     const overpassQuery = `
-      [out:json][timeout:15];
+      [out:json][timeout:8];
       area["name"="Duque de Caxias"]->.searchArea;
       (
         node["tourism"](area.searchArea);
@@ -235,16 +235,39 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
         node["leisure"](area.searchArea);
         node["shop"](area.searchArea);
       );
-      out body 50;
+      out body 100;
     `;
 
-    const osmResponse = await axios.post(
+    // O overpass-api.de (instância principal e pública) costuma bloquear ou
+    // rejeitar (erro 406) tráfego vindo de IPs de nuvem/serverless como os
+    // da Vercel, e também exige um User-Agent identificável em vez do
+    // "axios/x.x.x" padrão. Por isso: (1) mandamos um User-Agent de verdade,
+    // e (2) tentamos primeiro um espelho (mirror) oficial do Overpass, que
+    // costuma aceitar melhor esse tipo de tráfego, caindo para a instância
+    // principal só se o espelho falhar.
+    const overpassHeaders = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "DestinusApp/1.0 (projeto acadêmico; contato: destinus@example.com)",
+    };
+    const overpassEndpoints = [
+      "https://overpass.kumi.systems/api/interpreter",
       "https://overpass-api.de/api/interpreter",
-      `data=${encodeURIComponent(overpassQuery)}`,
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
+    ];
 
-    if (osmResponse.data && osmResponse.data.elements) {
+    let osmResponse: any = null;
+    for (const endpoint of overpassEndpoints) {
+      try {
+        osmResponse = await axios.post(endpoint, `data=${encodeURIComponent(overpassQuery)}`, {
+          headers: overpassHeaders,
+          timeout: 8000,
+        });
+        break; // deu certo, não precisa tentar o próximo
+      } catch (endpointErr) {
+        console.log(`Overpass (${endpoint}) falhou, tentando próximo se houver:`, (endpointErr as any)?.message);
+      }
+    }
+
+    if (osmResponse && osmResponse.data && osmResponse.data.elements) {
       dynamicPlaces = osmResponse.data.elements
         .filter((item: any) => item.tags && item.tags.name)
         .map((item: any) => {
@@ -322,6 +345,7 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
                 type,
                 key: googleApiKey,
               },
+              timeout: 8000,
             })
             .then((r) => ({ type, results: r.data?.results || [] }))
             .catch(() => ({ type, results: [] }))
