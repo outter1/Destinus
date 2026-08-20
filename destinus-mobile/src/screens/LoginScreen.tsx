@@ -24,6 +24,7 @@ export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginScreenProps
   const [password, setPassword] = useState("123456");
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -97,14 +98,25 @@ export function LoginScreen({ onLoginSuccess, onGoToRegister }: LoginScreenProps
           />
 
           {/* Campo de Senha */}
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor="#94A3B8"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Senha"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Pressable
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.eyeButton}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              hitSlop={8}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+            </Pressable>
+          </View>
 
           {/* Checkbox Salvar Conta */}
           <Pressable
@@ -187,6 +199,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F172A",
     marginBottom: 12,
+  },
+  passwordWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   checkboxRow: {
     flexDirection: "row",

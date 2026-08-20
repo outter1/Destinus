@@ -44,10 +44,12 @@ export function ProfileScreen({
     fontScale,
     isNeurodivergent,
     librasEnabled,
+    voiceCommandEnabled,
     speak,
     setFontScale,
     setIsNeurodivergent,
     setLibrasEnabled,
+    setVoiceCommandEnabled,
   } = useAccessibility();
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -119,7 +121,12 @@ export function ProfileScreen({
 
   const handleToggleLibras = (value: boolean) => {
     if (setLibrasEnabled) setLibrasEnabled(value);
-    if (speak) speak(value ? "Suporte a Libras e leitura por voz ativado" : "Suporte a Libras desativado");
+  };
+
+  const handleToggleVoiceCommand = (value: boolean) => {
+    // setVoiceCommandEnabled já cuida de avisar por voz na primeira
+    // ativação, explicando como usar (tocar no texto para ouvir).
+    if (setVoiceCommandEnabled) setVoiceCommandEnabled(value);
   };
 
   const handleLogout = () => {
@@ -281,14 +288,14 @@ export function ProfileScreen({
 
           <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
 
-          {/* Toggle Libras e Leitura por Voz */}
+          {/* Toggle Intérprete de Libras (independente do comando de voz) */}
           <View style={styles.preferenceRow}>
             <View style={styles.preferenceTextGroup}>
               <Text style={[styles.preferenceLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
-                🤟 Libras & Leitura de Voz
+                🤟 Intérprete de Libras
               </Text>
               <Text style={[styles.preferenceSublabel, { color: theme.secondaryTextColor, fontSize: 12 * fontScale }]}>
-                Habilita toque para ouvir os textos
+                Mostra o avatar VLibras flutuante na tela
               </Text>
             </View>
 
@@ -297,6 +304,29 @@ export function ProfileScreen({
               onValueChange={handleToggleLibras}
               trackColor={{ false: "#64748B", true: activeAccentColor }}
               thumbColor={librasEnabled ? "#FFFFFF" : "#F1F5F9"}
+              accessibilityLabel="Ativar ou desativar intérprete de Libras"
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
+
+          {/* Toggle Comando de Voz (independente de Libras) */}
+          <View style={styles.preferenceRow}>
+            <View style={styles.preferenceTextGroup}>
+              <Text style={[styles.preferenceLabel, { color: theme.textColor, fontSize: 14 * fontScale }]}>
+                🔊 Comando de Voz
+              </Text>
+              <Text style={[styles.preferenceSublabel, { color: theme.secondaryTextColor, fontSize: 12 * fontScale }]}>
+                Toque em qualquer texto para ouvi-lo em voz alta
+              </Text>
+            </View>
+
+            <Switch
+              value={voiceCommandEnabled}
+              onValueChange={handleToggleVoiceCommand}
+              trackColor={{ false: "#64748B", true: activeAccentColor }}
+              thumbColor={voiceCommandEnabled ? "#FFFFFF" : "#F1F5F9"}
+              accessibilityLabel="Ativar ou desativar comando de voz"
             />
           </View>
         </View>

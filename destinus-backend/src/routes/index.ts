@@ -2,6 +2,14 @@ import { Router, Request, Response } from "express";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcryptjs";
+
+const PASSWORD_SALT_ROUNDS = 10;
+
+// Senhas antigas (de antes do hash) foram salvas em texto puro no db.json.
+// Um hash bcrypt sempre começa com "$2a$", "$2b$" ou "$2y$" — usamos isso
+// para diferenciar hash de texto puro sem precisar de uma coluna extra.
+const isBcryptHash = (value: string): boolean => /^\$2[aby]\$/.test(value || "");
 
 const routes = Router();
 
@@ -201,10 +209,31 @@ const defaultNotifications = [
 ];
 
 // 1. Locais e Destinos
+// Localização padrão usada apenas quando o app não envia lat/lng (ex.: uma
+// chamada antiga, ou usuário que negou a permissão de GPS e nenhum fallback
+// foi enviado). Deixa de ser o CENTRO fixo da busca sempre que o app manda a
+// posição real do usuário.
+const DEFAULT_LAT = -22.7856;
+const DEFAULT_LNG = -43.3117;
+const DEFAULT_CITY_LABEL = "Duque de Caxias - RJ";
+const SEARCH_RADIUS_METERS = 15000;
+
 const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
   const queryStr = typeof req.query.query === "string" ? req.query.query.toLowerCase() : "";
   const categoryStr = typeof req.query.category === "string" ? req.query.category : "";
   const necessidadeStr = typeof req.query.necessidade === "string" ? req.query.necessidade.toLowerCase() : "";
+
+  // Localização real enviada pelo app (a partir do GPS do usuário). Quando
+  // não vem (app antigo, permissão negada sem fallback, etc.), usamos a
+  // localização padrão apenas como último recurso.
+  const parsedLat = parseFloat(typeof req.query.lat === "string" ? req.query.lat : "");
+  const parsedLng = parseFloat(typeof req.query.lng === "string" ? req.query.lng : "");
+  const hasUserLocation = !isNaN(parsedLat) && !isNaN(parsedLng);
+  const userLat = hasUserLocation ? parsedLat : DEFAULT_LAT;
+  const userLng = hasUserLocation ? parsedLng : DEFAULT_LNG;
+  const userCityLabel = typeof req.query.city === "string" && req.query.city.trim()
+    ? req.query.city.trim()
+    : DEFAULT_CITY_LABEL;
 
   const data = getDbData();
 
@@ -224,16 +253,18 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
   let dynamicPlaces: any[] = [];
 
   try {
+    // Busca por raio ao redor da localização real do usuário (enviada pelo
+    // app via lat/lng do GPS), em vez de fixar a área em "Duque de Caxias" —
+    // assim o app reconhece de fato o local onde o usuário está.
     const overpassQuery = `
       [out:json][timeout:8];
-      area["name"="Duque de Caxias"]->.searchArea;
       (
-        node["tourism"](area.searchArea);
-        node["amenity"="restaurant"](area.searchArea);
-        node["amenity"="cafe"](area.searchArea);
-        node["amenity"="bar"](area.searchArea);
-        node["leisure"](area.searchArea);
-        node["shop"](area.searchArea);
+        node["tourism"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
+        node["amenity"="restaurant"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
+        node["amenity"="cafe"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
+        node["amenity"="bar"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
+        node["leisure"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
+        node["shop"](around:${SEARCH_RADIUS_METERS},${userLat},${userLng});
       );
       out body 100;
     `;
@@ -287,11 +318,11 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
           return {
             id: `osm_${item.id}`,
             name: tags.name,
-            city: tags["addr:city"] || "Duque de Caxias - RJ",
+            city: tags["addr:city"] || userCityLabel,
             category: mappedCategory,
             address: tags["addr:street"]
-              ? `${tags["addr:street"]}, ${tags["addr:housenumber"] || "s/n"} - ${tags["addr:suburb"] || "Duque de Caxias"}`
-              : "Duque de Caxias - RJ",
+              ? `${tags["addr:street"]}, ${tags["addr:housenumber"] || "s/n"} - ${tags["addr:suburb"] || userCityLabel}`
+              : userCityLabel,
             latitude: lat,
             longitude: lng,
             lat,
@@ -331,8 +362,6 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_PLACES_API_KEY;
   if (googleApiKey) {
     try {
-      const CAXIAS_LAT = -22.7856;
-      const CAXIAS_LNG = -43.3117;
       const googleTypes = ["restaurant", "tourist_attraction", "museum", "park", "cafe"];
 
       const googleResults = await Promise.all(
@@ -340,8 +369,8 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
           axios
             .get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", {
               params: {
-                location: `${CAXIAS_LAT},${CAXIAS_LNG}`,
-                radius: 15000,
+                location: `${userLat},${userLng}`,
+                radius: SEARCH_RADIUS_METERS,
                 type,
                 key: googleApiKey,
               },
@@ -380,9 +409,9 @@ const handleGetLocais = async (req: Request, res: Response): Promise<void> => {
             return {
               id: `google_${item.place_id}`,
               name: item.name,
-              city: "Duque de Caxias - RJ",
+              city: userCityLabel,
               category: mappedCategory,
-              address: item.vicinity || "Duque de Caxias - RJ",
+              address: item.vicinity || userCityLabel,
               latitude: item.geometry.location.lat,
               longitude: item.geometry.location.lng,
               lat: item.geometry.location.lat,
@@ -607,15 +636,23 @@ routes.put("/reservas/:id/cancelar", (req: Request, res: Response): void => {
 });
 
 // 5. Autenticação e Perfil
-routes.post("/cadastro", (req: Request, res: Response): void => {
+routes.post("/cadastro", async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, needs, disabilities, preferences } = req.body;
   const data = getDbData();
+
+  if (!password) {
+    res.status(400).json({ message: "Senha é obrigatória." });
+    return;
+  }
+
+  // A senha nunca é salva em texto puro: aqui já entra como hash bcrypt.
+  const hashedPassword = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
 
   const newUser = {
     id: String(Date.now()),
     name,
     email,
-    password,
+    password: hashedPassword,
     photoUrl: "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
     needs: needs || { wheelchair: false, visual: false, hearing: false, neurodivergent: false },
     disabilities: disabilities || { wheelchair: false, blind: false, lowVision: false, deaf: false, autism: false, epilepsy: false },
@@ -626,22 +663,48 @@ routes.post("/cadastro", (req: Request, res: Response): void => {
   data.users.push(newUser);
   saveDbData(data);
 
-  res.status(201).json({ message: "Usuário cadastrado com sucesso!", user: newUser });
+  // Nunca devolve o hash da senha para o app.
+  const { password: _omit, ...userWithoutPassword } = newUser;
+  res.status(201).json({ message: "Usuário cadastrado com sucesso!", user: userWithoutPassword });
 });
 
-routes.post("/login", (req: Request, res: Response): void => {
+routes.post("/login", async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
   const data = getDbData();
 
   const allUsers = [...(data.users || []), ...(data.usuarios || [])];
-  const user = allUsers.find((u: any) => u.email === email && u.password === password);
+  const user = allUsers.find((u: any) => u.email === email);
 
   if (!user) {
     res.status(401).json({ message: "E-mail ou senha inválidos" });
     return;
   }
 
-  res.json({ message: "Login realizado com sucesso!", user });
+  const storedPassword = user.password || "";
+  let passwordMatches = false;
+
+  if (isBcryptHash(storedPassword)) {
+    passwordMatches = await bcrypt.compare(password, storedPassword);
+  } else {
+    // Compatibilidade com contas antigas, criadas antes do hash existir
+    // (senha ainda em texto puro no db.json). Se a senha bater, o hash é
+    // gerado agora mesmo e a conta é migrada automaticamente, sem exigir
+    // que o usuário troque a senha manualmente.
+    passwordMatches = storedPassword === password;
+    if (passwordMatches) {
+      user.password = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+      saveDbData(data);
+    }
+  }
+
+  if (!passwordMatches) {
+    res.status(401).json({ message: "E-mail ou senha inválidos" });
+    return;
+  }
+
+  // Nunca devolve o hash da senha para o app.
+  const { password: _omit, ...userWithoutPassword } = user;
+  res.json({ message: "Login realizado com sucesso!", user: userWithoutPassword });
 });
 
 routes.put("/usuarios/:id/foto", (req: Request, res: Response): void => {

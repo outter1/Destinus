@@ -21,7 +21,7 @@ const extractTextFromChildren = (node: React.ReactNode): string => {
 };
 
 export function AppText({ children, style, ...props }: AppTextProps) {
-  const { librasEnabled, speak, fontScale, theme } = useAccessibility();
+  const { voiceCommandEnabled, speak, fontScale, theme } = useAccessibility();
 
   // Achata o estilo para ler o fontSize original caso tenha sido informado no componente
   const flatStyle = StyleSheet.flatten(style) || {};
@@ -41,7 +41,7 @@ export function AppText({ children, style, ...props }: AppTextProps) {
 
   const textContent = extractTextFromChildren(children);
 
-  if (librasEnabled && textContent.trim().length > 0) {
+  if (voiceCommandEnabled && textContent.trim().length > 0) {
     return (
       <TouchableOpacity
         activeOpacity={0.7}

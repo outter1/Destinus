@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Destinus",
+    "slug": "destinus-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "O Destinus usa sua localização para encontrar locais acessíveis perto de você."
+      }
+    },
+    "android": {
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "O Destinus usa sua localização para encontrar locais acessíveis perto de você."
+        }
+      ]
+    ]
+  }
+}

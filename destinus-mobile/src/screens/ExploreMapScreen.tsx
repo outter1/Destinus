@@ -13,6 +13,7 @@ import {
 import { WebView } from "react-native-webview";
 import { useAccessibility } from "./AccessibilityContext";
 import { API_URL } from "../services/api";
+import { useUserLocation } from "../utils/useUserLocation";
 
 export interface Place {
   id: string;
@@ -34,17 +35,29 @@ const CITIES = ["Todas", "Duque de Caxias", "Nova Iguaçu", "São João de Merit
 
 export function ExploreMapScreen({ onSelectPlace }: ExploreMapScreenProps) {
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+  const { location, status: locationStatus } = useUserLocation();
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedCity, setSelectedCity] = useState("Todas");
   const [showMap, setShowMap] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/locais`)
+    // Só busca depois que a localização terminou de carregar (mesmo que o
+    // usuário tenha negado a permissão, nesse ponto já temos o fallback),
+    // para que a primeira busca já saia com o lugar certo do usuário.
+    if (locationStatus === "loading") return;
+
+    const params = new URLSearchParams({
+      lat: String(location.latitude),
+      lng: String(location.longitude),
+    });
+    if (location.city) params.set("city", location.city);
+
+    fetch(`${API_URL}/locais?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => setPlaces(data))
       .catch((err) => console.log("Erro ao carregar locais:", err));
-  }, []);
+  }, [locationStatus, location.latitude, location.longitude, location.city]);
 
   const filteredPlaces =
     selectedCity === "Todas"
@@ -79,15 +92,22 @@ export function ExploreMapScreen({ onSelectPlace }: ExploreMapScreenProps) {
       <body>
         <div id="map"></div>
         <script>
-          const map = L.map('map').setView([-22.7856, -43.3117], 11);
+          const map = L.map('map').setView([${location.latitude}, ${location.longitude}], 12);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
           }).addTo(map);
 
+          // Marcador da localização atual do usuário
+          L.circleMarker([${location.latitude}, ${location.longitude}], {
+            radius: 8, color: '#2563EB', fillColor: '#2563EB', fillOpacity: 0.6
+          }).addTo(map).bindPopup('Você está aqui');
+
           const places = ${JSON.stringify(filteredPlaces)};
           places.forEach(place => {
-            L.marker([-22.7856, -43.3117]).addTo(map)
+            const lat = place.latitude || place.lat || ${location.latitude};
+            const lng = place.longitude || place.lng || ${location.longitude};
+            L.marker([lat, lng]).addTo(map)
               .bindPopup('<b>' + place.name + '</b><br>' + place.city);
           });
         </script>

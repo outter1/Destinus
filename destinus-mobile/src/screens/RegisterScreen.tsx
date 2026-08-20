@@ -26,6 +26,7 @@ export function RegisterScreen({ onGoToLogin, onRegisterSuccess }: RegisterScree
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Perguntas de Acessibilidade
   const [needs, setNeeds] = useState({
@@ -140,14 +141,25 @@ export function RegisterScreen({ onGoToLogin, onRegisterSuccess }: RegisterScree
             />
 
             <Text style={styles.label}>Senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Crie uma senha"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Crie uma senha"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <Pressable
+                onPress={() => setShowPassword((prev) => !prev)}
+                style={styles.eyeButton}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                hitSlop={8}
+              >
+                <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+              </Pressable>
+            </View>
 
             <Pressable style={styles.primaryButtonOrange} onPress={handleNextStep}>
               <Text style={styles.primaryButtonText}>Continuar ➡️</Text>
@@ -280,6 +292,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
+  },
+  passwordWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 15,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   
   /* Botão Principal Etapa 1 (Laranja) */

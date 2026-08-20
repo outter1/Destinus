@@ -13,6 +13,7 @@ import axios from "axios";
 import { useAccessibility } from "./AccessibilityContext";
 import { API_URL } from "../config/api";
 import { notify } from "../utils/alert";
+import { useUserLocation } from "../utils/useUserLocation";
 
 export interface Place {
   id: string;
@@ -95,6 +96,7 @@ const CATEGORIES = [
 
 export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservationMade }: ExperiencesScreenProps) {
   const { theme, fontScale, isNeurodivergent, speak } = useAccessibility();
+  const { location, status: locationStatus } = useUserLocation();
 
   const [places, setPlaces] = useState<Place[]>(DEFAULT_PLACES);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,7 +111,13 @@ export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservati
   // integração com o Google também aparece aqui em Experiências.
   const loadPlacesFromApi = async () => {
     try {
-      const response = await axios.get(`${API_URL}/locais`);
+      const response = await axios.get(`${API_URL}/locais`, {
+        params: {
+          lat: location.latitude,
+          lng: location.longitude,
+          city: location.city,
+        },
+      });
       if (response.data && response.data.length > 0) {
         setPlaces(response.data);
       }
@@ -119,8 +127,9 @@ export function ExperiencesScreen({ user, onSelectPlace, navigation, onReservati
   };
 
   useEffect(() => {
+    if (locationStatus === "loading") return;
     loadPlacesFromApi();
-  }, []);
+  }, [locationStatus, location.latitude, location.longitude, location.city]);
 
   const handleReservar = async (place: Place) => {
     try {
